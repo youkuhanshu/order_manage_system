@@ -14,7 +14,7 @@ int QueueService::in_queue(int order_id){
     waiting_.push_back(QueueMsg(id,order_id,std::time(nullptr)));
 
     if(on_updated_){
-        on_updated_();
+        on_updated_("in_queue",&waiting_);
     }
 
     return id;
@@ -28,7 +28,7 @@ void QueueService::advance_queue(){
     current_eating++;
 
     if(on_updated_){
-        on_updated_();
+        on_updated_("advance_queue",&waiting_);
     }
 }
 

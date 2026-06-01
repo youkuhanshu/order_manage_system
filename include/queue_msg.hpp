@@ -4,7 +4,7 @@
 
 struct QueueMsg{
 int queue_id;               //拿到的队列号
-int order_id;        //对应的订单号
+int order_id;               //对应的订单号
 std::time_t in_time;        //时间戳
 
 //构造

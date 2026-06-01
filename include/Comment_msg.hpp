@@ -4,11 +4,11 @@
 #include <string>
 
 struct CommentMsg{
-    std::string user_id;
+    std::string user_id;                //用户ID
     std::vector<std::string> dish_ids;  //支持多菜品评论
-    std::string comment;
-    int rate;
-    std::time_t in_time;
+    std::string comment;                //评论内容
+    int rate;                           //分数
+    std::time_t in_time;                //时间戳
     //构造
 CommentMsg():user_id(""),comment(""),rate(0),in_time(0){}
 CommentMsg(std::string useri,std::string dishi,std::string com,int rate,std::time_t intim):user_id(useri),dish_id(dishi),comment(com),rate(rate),in_time(intim){}
@@ -55,4 +55,11 @@ static CommentMsg from_String(const std::string& str){
     //等着加个失败管理
     return;
 }
+};
+
+struct DishComment_msg{
+    double aver_rate;                    //该菜品平均分
+    int dish_comment_num;                //该菜品评论数
+    std::vector<CommentMsg> comments;    //该菜品对应评论
+    std::vector<int> rate_rank;          //分数排列评论索引
 };
