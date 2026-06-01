@@ -8,7 +8,14 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 COMPONENTS Widgets REQUIRED) # Qt COMPONENTS
+
+# 添加项目根目录的 include 路径
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
+
 aux_source_directory(./src srcs)
+
+# 添加 storage 目录下的源文件
+list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/../storage/FileManager.cpp)
 
 # Specify MSVC UTF-8 encoding   
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
