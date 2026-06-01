@@ -3,3 +3,8 @@ build/
 .qtcreator/
 requirement.md
 book_arrangement/
+# 编译产物
+*.o
+*.exe
+# 临时文件
+*~
