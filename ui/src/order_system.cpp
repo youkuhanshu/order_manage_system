@@ -13,6 +13,13 @@
 order_system::order_system(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui_order_system)
+    , m_btnMenu(nullptr)
+    , m_btnCart(nullptr)
+    , m_btnQueue(nullptr)
+    , m_stackedWidget(nullptr)
+    , m_menuPage(nullptr)
+    , m_cartPage(nullptr)
+    , m_queuePage(nullptr)
     , m_categoryList(nullptr)
     , m_scrollArea(nullptr)
     , m_dishContainer(nullptr)
@@ -34,6 +41,7 @@ void order_system::loadData()
     fileManager.LoadMenu();
     m_allItems  = fileManager.getMenu_qt();
     m_categories = fileManager.getCategories_qt();
+    m_recommendItems = fileManager.getRecommend_qt();
 
     if (m_allItems.isEmpty()) {
         QMessageBox::warning(this, "加载失败", QString("未能加载菜单数据\n请确认文件存在且格式正确!"));
@@ -47,7 +55,7 @@ void order_system::loadData()
 void order_system::setupUI()
 {
     // ---- 窗口属性 ----
-    setWindowTitle("订单管理系统 — 菜品菜单");
+    setWindowTitle("订单管理系统");
     resize(1000, 680);
     setMinimumSize(800, 600);
 
@@ -60,7 +68,7 @@ void order_system::setupUI()
     mainLayout->setSpacing(0);
 
     // ============================================================
-    //  顶部标题栏
+    //  顶部导航栏
     // ============================================================
     auto *topBar = new QFrame(ui->centralwidget);
     topBar->setFixedHeight(54);
@@ -75,32 +83,71 @@ void order_system::setupUI()
     icon->setStyleSheet("font-size: 24px; border: none; background: transparent;");
     topLayout->addWidget(icon);
 
-    auto *title = new QLabel("菜品菜单", topBar);
+    auto *title = new QLabel("饱了么", topBar);
     title->setStyleSheet(
         "font-size: 18px; font-weight: bold; color: #333333;"
         "border: none; background: transparent;");
     topLayout->addWidget(title);
 
+    topLayout->addSpacing(30);
+
+    // ---- 导航按钮 ----
+    QString navBtnStyle = R"(
+        QPushButton {
+            background: transparent;
+            border: none;
+            font-size: 14px;
+            color: #666666;
+            padding: 6px 18px;
+        }
+        QPushButton:hover { color: #0085FF; }
+        QPushButton[active="true"] {
+            color: #0085FF;
+            font-weight: bold;
+            border-bottom: 2px solid #0085FF;
+        }
+    )";
+
+    m_btnMenu = new QPushButton("菜品菜单", topBar);
+    m_btnMenu->setStyleSheet(navBtnStyle);
+    m_btnMenu->setCursor(Qt::PointingHandCursor);
+    m_btnMenu->setProperty("active", true);  // 默认选中
+    topLayout->addWidget(m_btnMenu);
+
+    m_btnCart = new QPushButton("购物车", topBar);
+    m_btnCart->setStyleSheet(navBtnStyle);
+    m_btnCart->setCursor(Qt::PointingHandCursor);
+    topLayout->addWidget(m_btnCart);
+
+    m_btnQueue = new QPushButton("排队进度", topBar);
+    m_btnQueue->setStyleSheet(navBtnStyle);
+    m_btnQueue->setCursor(Qt::PointingHandCursor);
+    topLayout->addWidget(m_btnQueue);
+
     topLayout->addStretch();
 
-    auto *dishCount = new QLabel(
+    m_dishcount = new QLabel(
         QString("共 %1 道菜品").arg(m_allItems.size()), topBar);
-    dishCount->setStyleSheet(
+    m_dishcount->setStyleSheet(
         "font-size: 13px; color: #999999;"
         "border: none; background: transparent;");
-    topLayout->addWidget(dishCount);
+    topLayout->addWidget(m_dishcount);
 
     mainLayout->addWidget(topBar);
 
     // ============================================================
-    //  内容区：左侧分类 + 右侧菜品
+    //  QStackedWidget 页面容器
     // ============================================================
-    auto *contentLayout = new QHBoxLayout();
-    contentLayout->setContentsMargins(0, 0, 0, 0);
-    contentLayout->setSpacing(0);
+    m_stackedWidget = new QStackedWidget(ui->centralwidget);
 
-    // ---- 左侧分类列表 ----
-    m_categoryList = new QListWidget(ui->centralwidget);
+    // ---------- 第 0 页：菜品菜单 ----------
+    m_menuPage = new QWidget();
+    auto *menuPageLayout = new QHBoxLayout(m_menuPage);
+    menuPageLayout->setContentsMargins(0, 0, 0, 0);
+    menuPageLayout->setSpacing(0);
+
+    // 左侧分类列表
+    m_categoryList = new QListWidget(m_menuPage);
     m_categoryList->setFixedWidth(150);
     m_categoryList->setStyleSheet(R"(
         QListWidget {
@@ -116,18 +163,19 @@ void order_system::setupUI()
             border: none;
         }
         QListWidget::item:selected {
-            color: #FFC300;
+            color: #0085FF;
             font-weight: bold;
-            background: #FFF9E6;
-            border-left: 3px solid #FFC300;
+            background: #EBF5FF;
+            border-left: 3px solid #0085FF;
         }
         QListWidget::item:hover {
-            color: #FFC300;
-            background: #FFFDF5;
+            color: #0085FF;
+            background: #F5FAFF;
         }
     )");
 
     m_categoryList->addItem("全部");
+    m_categoryList->addItem("推荐");
     for (const auto &cat : m_categories) {
         m_categoryList->addItem(cat);
     }
@@ -135,12 +183,11 @@ void order_system::setupUI()
 
     connect(m_categoryList, &QListWidget::currentRowChanged,
             this, &order_system::onCategoryChanged);
-    // 发送者，信号，接收者，槽
 
-    contentLayout->addWidget(m_categoryList);
+    menuPageLayout->addWidget(m_categoryList);
 
-    // ---- 右侧滚动菜品区 ----
-    m_scrollArea = new QScrollArea(ui->centralwidget);
+    // 右侧滚动菜品区
+    m_scrollArea = new QScrollArea(m_menuPage);
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setStyleSheet(R"(
         QScrollArea {
@@ -173,9 +220,44 @@ void order_system::setupUI()
     m_dishListLayout->addStretch();
 
     m_scrollArea->setWidget(m_dishContainer);
-    contentLayout->addWidget(m_scrollArea, 1);
+    menuPageLayout->addWidget(m_scrollArea, 1);
 
-    mainLayout->addLayout(contentLayout, 1);
+    m_stackedWidget->addWidget(m_menuPage);  // index 0
+
+    // ---------- 第 1 页：购物车 ----------
+    m_cartPage = new QWidget();
+    auto *cartLayout = new QVBoxLayout(m_cartPage);
+    cartLayout->setAlignment(Qt::AlignCenter);
+
+    auto *cartPlaceholder = new QLabel("购物车 — 没写", m_cartPage);
+    cartPlaceholder->setAlignment(Qt::AlignCenter);
+    cartPlaceholder->setStyleSheet(
+        "font-size: 20px; color: #CCCCCC; border: none; background: transparent;");
+    cartLayout->addWidget(cartPlaceholder);
+
+    m_stackedWidget->addWidget(m_cartPage);  // index 1
+
+    // ---------- 第 2 页：排队进度 ----------
+    m_queuePage = new QWidget();
+    auto *queueLayout = new QVBoxLayout(m_queuePage);
+    queueLayout->setAlignment(Qt::AlignCenter);
+
+    auto *queuePlaceholder = new QLabel("排队进度 — 没写", m_queuePage);
+    queuePlaceholder->setAlignment(Qt::AlignCenter);
+    queuePlaceholder->setStyleSheet(
+        "font-size: 20px; color: #CCCCCC; border: none; background: transparent;");
+    queueLayout->addWidget(queuePlaceholder);
+
+    m_stackedWidget->addWidget(m_queuePage);  // index 2
+
+    mainLayout->addWidget(m_stackedWidget, 1);
+
+    // ============================================================
+    //  导航按钮 → 切换页面
+    // ============================================================
+    connect(m_btnMenu, &QPushButton::clicked, this, [this]() { switchPage(0); });
+    connect(m_btnCart, &QPushButton::clicked, this, [this]() { switchPage(1); });
+    connect(m_btnQueue, &QPushButton::clicked, this, [this]() { switchPage(2); });
 
     // ---- 状态栏提示 ----
     ui->statusbar->showMessage("就绪 — 请选择分类浏览菜品");
@@ -184,7 +266,27 @@ void order_system::setupUI()
         "border-top: 1px solid #E8E8E8; }");
 
     // ---- 初始加载全部菜品 ----
-    refreshDishList();
+    refreshDishList("全部");
+}
+
+// ================================================================
+//  页面切换
+// ================================================================
+
+void order_system::switchPage(int index)
+{
+    m_stackedWidget->setCurrentIndex(index);
+
+    // 更新按钮高亮
+    m_btnMenu->setProperty("active", index == 0);
+    m_btnCart->setProperty("active", index == 1);
+    m_btnQueue->setProperty("active", index == 2);
+
+    // 刷新样式（property 改了之后必须重新 polish）
+    for (auto *btn : {m_btnMenu, m_btnCart, m_btnQueue}) {
+        btn->style()->unpolish(btn);
+        btn->style()->polish(btn);
+    }
 }
 
 // ================================================================
@@ -195,10 +297,7 @@ void order_system::onCategoryChanged(int row)
 {
     if (row < 0) return;
 
-    const QString cat = (row == 0)
-        ? QString()           // "全部" → 空字符串表示不过滤
-        : m_categoryList->item(row)->text();
-
+    const QString cat = m_categoryList->item(row)->text();
     refreshDishList(cat);
 }
 
@@ -224,6 +323,8 @@ void order_system::onAddDish(int dishId)
 
 void order_system::refreshDishList(const QString &category)
 {
+    int dishcount = 0;
+
     // 清除旧卡片
     QLayoutItem *child;
     while ((child = m_dishListLayout->takeAt(0)) != nullptr) {
@@ -233,15 +334,27 @@ void order_system::refreshDishList(const QString &category)
         delete child;
     }
 
-    // 筛选
-    for (const auto &item : m_allItems) {
-        if (category.isEmpty() || item.category == category) {
+    if (category == "推荐") {
+        for (const auto &item : m_recommendItems) {
             auto *card = new DishCard(item, m_dishContainer);
-            connect(card, &DishCard::addClicked,
-                    this, &order_system::onAddDish);
+            connect(card, &DishCard::addClicked, this, &order_system::onAddDish);
             m_dishListLayout->addWidget(card);
+            dishcount++;
         }
     }
+    else {
+        // 筛选
+        for (const auto &item : m_allItems) {
+            if (item.category == category || category == "全部") {
+                auto *card = new DishCard(item, m_dishContainer);
+                connect(card, &DishCard::addClicked, this, &order_system::onAddDish);
+                m_dishListLayout->addWidget(card);
+                dishcount++;
+            }
+        }
+    }
+
+    m_dishcount->setText(QString("共 %1 道菜品").arg(dishcount));
 
     // 结尾弹簧
     m_dishListLayout->addStretch();

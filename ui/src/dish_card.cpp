@@ -6,10 +6,10 @@
 // ---- 分类色板 --------------------------------------------------
 static const char *categoryColor(const QString &category)
 {
-    if (category == "热菜") return "#FF6B35";
-    if (category == "主食") return "#FFC300";
-    if (category == "饮品") return "#4ECDC4";
-    if (category == "甜品") return "#FF8C94";
+    if (category == "热菜") return "#FF6B4A";
+    if (category == "主食") return "#FFB347";
+    if (category == "饮品") return "#5DADE2";
+    if (category == "甜品") return "#FF8CA3";
     return "#BBBBBB";
 }
 
@@ -33,8 +33,8 @@ void DishCard::setupUI(const Dish_qt &dish)
             border: 1px solid #F0F0F0;
         }
         #dishCard:hover {
-            border: 1px solid #FFD666;
-            background: #FFFEFA;
+            border: 1px solid #e0e0e0;
+            background: #fafdff;
         }
     )");
     setFixedHeight(120);
@@ -92,7 +92,7 @@ void DishCard::setupUI(const Dish_qt &dish)
 
     m_ratingLabel = new QLabel(QString("★ %1").arg(dish.rating, 0, 'f', 1), this);
     m_ratingLabel->setStyleSheet(
-        "font-size: 12px; color: #FFC300; font-weight: bold;"
+        "font-size: 12px; color: #ffd500; font-weight: bold;"
         "border: none; background: transparent;");
     statsLayout->addWidget(m_ratingLabel);
 
@@ -114,7 +114,7 @@ void DishCard::setupUI(const Dish_qt &dish)
 
     m_priceLabel = new QLabel(QString("¥%1").arg(dish.price, 0, 'f', 0), this);
     m_priceLabel->setStyleSheet(
-        "font-size: 22px; font-weight: bold; color: #FF4D00;"
+        "font-size: 18px; font-weight: normal; color: #FF4D2E;"
         "border: none; background: transparent;");
     m_priceLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     rightLayout->addWidget(m_priceLabel);
@@ -124,15 +124,15 @@ void DishCard::setupUI(const Dish_qt &dish)
     m_addBtn->setCursor(Qt::PointingHandCursor);
     m_addBtn->setStyleSheet(R"(
         QPushButton {
-            background: #FFC300;
+            background: #ffd500;
             color: #FFFFFF;
             border: none;
             border-radius: 15px;
             font-size: 20px;
             font-weight: bold;
         }
-        QPushButton:hover  { background: #FFB800; }
-        QPushButton:pressed { background: #E5A800; }
+        QPushButton:hover  { background: #e6b000; }
+        QPushButton:pressed { background: #daa401; }
     )");
     connect(m_addBtn, &QPushButton::clicked, this, [this]() {
         emit addClicked(m_dish.id);

@@ -40,6 +40,7 @@ private:
     static std::vector<Dish> all_dishes_cpp;
     static QList<Dish_qt> all_dishes_qt;
     static QStringList all_categories_qt;
+    static QList<Dish_qt> recommend_dishes_qt;
 public:
     void LoadMenu();
 
@@ -51,4 +52,7 @@ public:
 
     // 在Qt中使用
     static QStringList getCategories_qt();
+
+    // 在Qt中使用
+    static QList<Dish_qt> getRecommend_qt();
 };

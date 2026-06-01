@@ -4,6 +4,7 @@
 std::vector<Dish> FileManager::all_dishes_cpp;
 QList<Dish_qt> FileManager::all_dishes_qt;
 QStringList FileManager::all_categories_qt;
+QList<Dish_qt> FileManager::recommend_dishes_qt;
 
 void FileManager::LoadMenu() {
     all_dishes_cpp.clear();
@@ -45,6 +46,10 @@ void FileManager::LoadMenu() {
         }
     }
 
+    for (size_t i = 0;i < 5;i++) {
+        recommend_dishes_qt.append(all_dishes_qt[i]);
+    }
+
     ifs.close();
 }
 
@@ -61,4 +66,9 @@ QList<Dish_qt> FileManager::getMenu_qt() {
 // 在Qt中使用
 QStringList FileManager::getCategories_qt() {
     return all_categories_qt;
+}
+
+// 在Qt中使用
+QList<Dish_qt> FileManager::getRecommend_qt() {
+    return recommend_dishes_qt;
 }
