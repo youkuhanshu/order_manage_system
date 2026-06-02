@@ -1,6 +1,5 @@
 #include "FileManager.h"
 
-// 静态成员变量定义
 std::vector<Dish> FileManager::all_dishes_cpp;
 QList<Dish_qt> FileManager::all_dishes_qt;
 QStringList FileManager::all_categories_qt;

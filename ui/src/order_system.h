@@ -27,34 +27,43 @@ private:
     void loadData();
     void setupUI();
     void refreshDishList(const QString &category = QString());
+    void switchRecommendMethod(int index);
+    QString m_recommendMethod;
 
     Ui_order_system *ui;
 
     // 导航按钮
-    QPushButton  *m_btnMenu;
-    QPushButton  *m_btnCart;
-    QPushButton  *m_btnQueue;
+    QPushButton *m_btnMenu;
+    QPushButton *m_btnCart;
+    QPushButton *m_btnQueue;
+
+    // 推荐按钮
+    QPushButton *m_mostSaled;
+    QPushButton *m_highScore;
+    QPushButton *m_mostCommented;
+    // 推荐按钮容器
+    QFrame *m_recommendBar;
 
     // 页面容器
     QStackedWidget *m_stackedWidget;
 
-    // 三个页面
+    // 页面
     QWidget *m_menuPage;
     QWidget *m_cartPage;
     QWidget *m_queuePage;
 
     // 菜单页：左侧分类列表
-    QListWidget  *m_categoryList;
+    QListWidget *m_categoryList;
 
     // 菜单页：右侧菜品区域
-    QScrollArea  *m_scrollArea;
-    QWidget      *m_dishContainer;
-    QVBoxLayout  *m_dishListLayout;
+    QScrollArea *m_scrollArea;
+    QWidget *m_dishContainer;
+    QVBoxLayout *m_dishListLayout;
 
     // 数据
     QList<Dish_qt> m_allItems;
     QList<Dish_qt> m_recommendItems;
-    QStringList     m_categories;
+    QStringList m_categories;
 
     // label
     QLabel *m_dishcount;
