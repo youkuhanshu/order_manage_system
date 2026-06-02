@@ -12,7 +12,7 @@ struct CommentMsg{
     std::time_t in_time;                //时间戳
     //构造
 CommentMsg():user_id(""),comment(""),rate(0),in_time(0){}
-CommentMsg(std::string useri,std::string dishi,std::string com,int rate,std::time_t intim):user_id(useri),dish_id(dishi),comment(com),rate(rate),in_time(intim){}
+CommentMsg(std::string useri,std::vector<std::string> dish_ids,std::string com,int rate,std::time_t intim):user_id(useri),dish_ids(dish_ids),comment(com),rate(rate),in_time(intim){}
 
 //string和Queue_msg类型转换函数
 std::string to_String() const{
@@ -54,7 +54,7 @@ static CommentMsg from_String(const std::string& str){
         return msg;
     }
     //等着加个失败管理
-    return;
+    return msg;
 }
 };
 

@@ -31,6 +31,6 @@ static QueueMsg from_String(const std::string& str){
         return msg;
     }
     //等着加个失败管理
-    return;
+    return msg;
 }
 };

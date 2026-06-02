@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QHBoxLayout>
+#include <QLineEdit>
 #include <QMessageBox>
 
 order_system::order_system(QWidget *parent)
@@ -13,6 +14,8 @@ order_system::order_system(QWidget *parent)
     , m_btnCart(nullptr)
     , m_btnQueue(nullptr)
     , m_stackedWidget(nullptr)
+    , m_loginPage(nullptr)
+    , m_registerPage(nullptr)
     , m_menuPage(nullptr)
     , m_cartPage(nullptr)
     , m_queuePage(nullptr)
@@ -35,17 +38,23 @@ void order_system::loadData()
 {
     FileManager fileManager;
     fileManager.LoadMenu();
+    fileManager.LoadUsers();
     m_allItems  = fileManager.getMenu_qt();
     m_categories = fileManager.getCategories_qt();
     m_recommendItems = fileManager.getRecommend_qt();
+    m_users = fileManager.getUsers_cpp();
 
     if (m_allItems.isEmpty()) {
         QMessageBox::warning(this, "加载失败", QString("未能加载菜单数据\n请确认文件存在且格式正确!"));
+    }
+    if (m_users.size() == 0) {
+        QMessageBox::warning(this, "加载失败", QString("未能加载用户数据\n请确认文件存在且格式正确!"));
     }
 }
 
 void order_system::setupUI()
 {
+
     // 窗口属性
     setWindowTitle("订单管理系统");
     resize(1000, 680);
@@ -60,19 +69,19 @@ void order_system::setupUI()
     mainLayout->setSpacing(0);
 
     // 导航栏
-    auto *topBar = new QFrame(ui->centralwidget);
-    topBar->setFixedHeight(54);
-    topBar->setStyleSheet("QFrame { background: #FFFFFF; border-bottom: 1px solid #E8E8E8; }");
+    m_topBar = new QFrame(ui->centralwidget);
+    m_topBar->setFixedHeight(54);
+    m_topBar->setStyleSheet("QFrame { background: #FFFFFF; border-bottom: 1px solid #E8E8E8; }");
 
-    auto *topLayout = new QHBoxLayout(topBar);
+    auto *topLayout = new QHBoxLayout(m_topBar);
     topLayout->setContentsMargins(20, 0, 20, 0);
     topLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
-    auto *icon = new QLabel(QString::fromUtf8("🍽"), topBar);
+    auto *icon = new QLabel(QString::fromUtf8("🍽"), m_topBar);
     icon->setStyleSheet("font-size: 24px; border: none; background: transparent;");
     topLayout->addWidget(icon);
 
-    auto *title = new QLabel("饱了么", topBar);
+    auto *title = new QLabel("饱了么", m_topBar);
     title->setStyleSheet(
         "font-size: 18px; font-weight: bold; color: #333333;"
         "border: none; background: transparent;"
@@ -98,38 +107,249 @@ void order_system::setupUI()
         }
     )";
 
-    m_btnMenu = new QPushButton("菜品菜单", topBar);
+    m_btnMenu = new QPushButton("菜品菜单", m_topBar);
     m_btnMenu->setStyleSheet(navBtnStyle);
     m_btnMenu->setCursor(Qt::PointingHandCursor);
-    m_btnMenu->setProperty("active", true);  // 默认选中菜单界面
+    // 登录成功后才激活菜单按钮
     m_recommendMethod = "销量最高"; // 默认推荐方式为销量最高
     topLayout->addWidget(m_btnMenu);
 
-    m_btnCart = new QPushButton("购物车", topBar);
+    m_btnCart = new QPushButton("购物车", m_topBar);
     m_btnCart->setStyleSheet(navBtnStyle);
     m_btnCart->setCursor(Qt::PointingHandCursor);
     topLayout->addWidget(m_btnCart);
 
-    m_btnQueue = new QPushButton("排队进度", topBar);
+    m_btnQueue = new QPushButton("排队进度", m_topBar);
     m_btnQueue->setStyleSheet(navBtnStyle);
     m_btnQueue->setCursor(Qt::PointingHandCursor);
     topLayout->addWidget(m_btnQueue);
 
     topLayout->addStretch();
 
-    m_dishcount = new QLabel(QString("共 %1 道菜品").arg(m_allItems.size()), topBar);
+    m_dishcount = new QLabel(QString("共 %1 道菜品").arg(m_allItems.size()), m_topBar);
     m_dishcount->setStyleSheet(
         "font-size: 13px; color: #999999;"
         "border: none; background: transparent;"
     );
     topLayout->addWidget(m_dishcount);
 
-    mainLayout->addWidget(topBar);
+    mainLayout->addWidget(m_topBar);
+
 
     // 页面容器，存放所有页面
     m_stackedWidget = new QStackedWidget(ui->centralwidget);
 
-    
+    // 登录页面
+    m_loginPage = new QWidget();
+    auto *loginPageLayout = new QVBoxLayout(m_loginPage);
+    loginPageLayout->setAlignment(Qt::AlignCenter);
+    loginPageLayout->setContentsMargins(0, 0, 0, 0);
+
+    auto *loginCard = new QFrame(m_loginPage); // 登录卡片
+    loginCard->setFixedSize(400, 420);
+    loginCard->setStyleSheet(
+        "QFrame { background: #FFFFFF; border-radius: 12px;"
+        "border: 1px solid #E8E8E8; }");
+
+    auto *cardLayout = new QVBoxLayout(loginCard);
+    cardLayout->setAlignment(Qt::AlignCenter);
+    cardLayout->setContentsMargins(50, 40, 50, 40);
+    cardLayout->setSpacing(16);
+
+    // auto *loginIcon = new QLabel(QString::fromUtf8("🍽"), loginCard); // 图标
+    // loginIcon->setAlignment(Qt::AlignCenter);
+    // loginIcon->setStyleSheet(
+    //     "font-size: 40px; border: none; background: transparent;");
+    // cardLayout->addWidget(loginIcon);
+
+    auto *nameTitle = new QLabel("饱了么", loginCard); // 标题
+    nameTitle->setAlignment(Qt::AlignCenter);
+    nameTitle->setStyleSheet(
+        "font-size: 30px; font-weight: bold; color: #333333;"
+        "border: none; background: transparent;");
+    cardLayout->addWidget(nameTitle);
+
+    cardLayout->addSpacing(10);
+
+    auto *loginTitle = new QLabel("登录", loginCard); // 标题
+    loginTitle->setAlignment(Qt::AlignCenter);
+    loginTitle->setStyleSheet(
+        "font-size: 20px; font-weight: bold; color: #333333;"
+        "border: none; background: transparent;");
+    cardLayout->addWidget(loginTitle);
+
+    cardLayout->addSpacing(20);
+
+    auto *usernameEdit = new QLineEdit(loginCard); // 用户名输入框
+    usernameEdit->setPlaceholderText("请输入用户名");
+    usernameEdit->setFixedHeight(40);
+    usernameEdit->setStyleSheet(R"(
+        QLineEdit {
+            border: 1px solid #E0E0E0;
+            border-radius: 6px;
+            padding: 0 12px;
+            font-size: 14px;
+            color: #333333;
+            background: #FAFAFA;
+        }
+        QLineEdit:focus {
+            border-color: #0085FF;
+            background: #FFFFFF;
+        }
+    )");
+    cardLayout->addWidget(usernameEdit);
+
+    auto *passwordEdit = new QLineEdit(loginCard); // 密码输入框
+    passwordEdit->setPlaceholderText("请输入密码");
+    passwordEdit->setEchoMode(QLineEdit::Password);
+    passwordEdit->setFixedHeight(40);
+    passwordEdit->setStyleSheet(usernameEdit->styleSheet());
+    cardLayout->addWidget(passwordEdit);
+
+    cardLayout->addSpacing(4);
+
+    auto *loginBtn = new QPushButton("登  录", loginCard); // 登录按钮
+    loginBtn->setFixedHeight(42);
+    loginBtn->setCursor(Qt::PointingHandCursor);
+    loginBtn->setStyleSheet(R"(
+        QPushButton {
+            background: #0085FF;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        QPushButton:hover  { background: #0073E6; }
+        QPushButton:pressed { background: #0060BF; }
+    )");
+    cardLayout->addWidget(loginBtn);
+
+    auto *toRegisterBtn = new QPushButton("没有账号？立即注册", loginCard); // 注册入口
+    toRegisterBtn->setCursor(Qt::PointingHandCursor);
+    toRegisterBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none;"
+        "font-size: 12px; color: #999999; }"
+        "QPushButton:hover { color: #0085FF; }");
+    cardLayout->addWidget(toRegisterBtn);
+
+    // 点击登录 → 进入菜单页
+    connect(loginBtn, &QPushButton::clicked, this, [this, usernameEdit, passwordEdit]() {
+        bool success = checkUser(usernameEdit->text(), passwordEdit->text());
+        if (success) {
+            switchPage(2);
+            m_topBar->setVisible(true); // 显示导航栏
+        }
+        else {
+            QMessageBox::warning(this, "登录失败", "用户名或密码不正确！");
+        }
+    });
+    // 点击注册 → 进入注册页
+    connect(toRegisterBtn, &QPushButton::clicked, this, [this]() {
+        switchPage(1);
+    });
+
+    loginPageLayout->addWidget(loginCard);
+    m_stackedWidget->addWidget(m_loginPage);  // index 0
+
+    // 注册页面
+    m_registerPage = new QWidget();
+    auto *regPageLayout = new QVBoxLayout(m_registerPage);
+    regPageLayout->setAlignment(Qt::AlignCenter);
+    regPageLayout->setContentsMargins(0, 0, 0, 0);
+
+    auto *regCard = new QFrame(m_registerPage);
+    regCard->setFixedSize(400, 480);
+    regCard->setStyleSheet(
+        "QFrame { background: #FFFFFF; border-radius: 12px;"
+        "border: 1px solid #E8E8E8; }");
+
+    auto *regCardLayout = new QVBoxLayout(regCard);
+    regCardLayout->setAlignment(Qt::AlignCenter);
+    regCardLayout->setContentsMargins(50, 36, 50, 36);
+    regCardLayout->setSpacing(14);
+
+    auto *regIcon = new QLabel(QString::fromUtf8("🍽"), regCard);
+    regIcon->setAlignment(Qt::AlignCenter);
+    regIcon->setStyleSheet("font-size: 36px; border: none; background: transparent;");
+    regCardLayout->addWidget(regIcon);
+
+    auto *regTitle = new QLabel("注册", regCard);
+    regTitle->setAlignment(Qt::AlignCenter);
+    regTitle->setStyleSheet(
+        "font-size: 20px; font-weight: bold; color: #333333;"
+        "border: none; background: transparent;");
+    regCardLayout->addWidget(regTitle);
+
+    regCardLayout->addSpacing(6);
+
+    auto *regUserEdit = new QLineEdit(regCard);
+    regUserEdit->setPlaceholderText("请输入用户名");
+    regUserEdit->setFixedHeight(40);
+    regUserEdit->setStyleSheet(R"(
+        QLineEdit {
+            border: 1px solid #E0E0E0; border-radius: 6px;
+            padding: 0 12px; font-size: 14px; color: #333333;
+            background: #FAFAFA;
+        }
+        QLineEdit:focus { border-color: #0085FF; background: #FFFFFF; }
+    )");
+    regCardLayout->addWidget(regUserEdit);
+
+    auto *regPwdEdit = new QLineEdit(regCard);
+    regPwdEdit->setPlaceholderText("请设置密码");
+    regPwdEdit->setEchoMode(QLineEdit::Password);
+    regPwdEdit->setFixedHeight(40);
+    regPwdEdit->setStyleSheet(regUserEdit->styleSheet());
+    regCardLayout->addWidget(regPwdEdit);
+
+    auto *regPwdConfirm = new QLineEdit(regCard);
+    regPwdConfirm->setPlaceholderText("请再次输入密码");
+    regPwdConfirm->setEchoMode(QLineEdit::Password);
+    regPwdConfirm->setFixedHeight(40);
+    regPwdConfirm->setStyleSheet(regUserEdit->styleSheet());
+    regCardLayout->addWidget(regPwdConfirm);
+
+    regCardLayout->addSpacing(2);
+
+    auto *regBtn = new QPushButton("注  册", regCard);
+    regBtn->setFixedHeight(42);
+    regBtn->setCursor(Qt::PointingHandCursor);
+    regBtn->setStyleSheet(R"(
+        QPushButton {
+            background: #0085FF; color: #FFFFFF; border: none;
+            border-radius: 6px; font-size: 16px; font-weight: bold;
+        }
+        QPushButton:hover  { background: #0073E6; }
+        QPushButton:pressed { background: #0060BF; }
+    )");
+    regCardLayout->addWidget(regBtn);
+
+    auto *toLoginBtn = new QPushButton("已有账号？立即登录", regCard);
+    toLoginBtn->setCursor(Qt::PointingHandCursor);
+    toLoginBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none;"
+        "font-size: 12px; color: #999999; }"
+        "QPushButton:hover { color: #0085FF; }");
+    regCardLayout->addWidget(toLoginBtn);
+
+    connect(regBtn, &QPushButton::clicked, this, [this, regUserEdit, regPwdEdit, regPwdConfirm]() {
+        if (regPwdEdit->text() != regPwdConfirm->text()) {
+            QMessageBox::warning(this, "注册失败", "两次输入的密码不相同！");
+        }
+        else {
+            addUser(regUserEdit->text(), regPwdEdit->text());
+            switchPage(2);
+            m_topBar->setVisible(true); // 显示导航栏
+        }
+    });
+    connect(toLoginBtn, &QPushButton::clicked, this, [this]() {
+        switchPage(0);
+    });
+
+    regPageLayout->addWidget(regCard);
+    m_stackedWidget->addWidget(m_registerPage);  // index 1
+
 
     // 菜单界面
     m_menuPage = new QWidget();
@@ -270,7 +490,8 @@ void order_system::setupUI()
 
     rightMenuLayout->addWidget(m_scrollArea, 1);
     menuPageLayout->addWidget(rightContainer, 1);
-    m_stackedWidget->addWidget(m_menuPage);  // index 0
+    m_stackedWidget->addWidget(m_menuPage);  // index 2
+
 
     // 购物车页面
     m_cartPage = new QWidget();
@@ -284,7 +505,8 @@ void order_system::setupUI()
     );
     cartLayout->addWidget(cartPlaceholder);
 
-    m_stackedWidget->addWidget(m_cartPage);  // index 1
+    m_stackedWidget->addWidget(m_cartPage);  // index 3
+
 
     // 排队界面
     m_queuePage = new QWidget();
@@ -298,14 +520,15 @@ void order_system::setupUI()
     );
     queueLayout->addWidget(queuePlaceholder);
 
-    m_stackedWidget->addWidget(m_queuePage);  // index 2
+    m_stackedWidget->addWidget(m_queuePage);  // index 4
+
 
     mainLayout->addWidget(m_stackedWidget, 1);
 
     // 导航栏
-    connect(m_btnMenu, &QPushButton::clicked, this, [this]() { switchPage(0); });
-    connect(m_btnCart, &QPushButton::clicked, this, [this]() { switchPage(1); });
-    connect(m_btnQueue, &QPushButton::clicked, this, [this]() { switchPage(2); });
+    connect(m_btnMenu, &QPushButton::clicked, this, [this]() { switchPage(2); });
+    connect(m_btnCart, &QPushButton::clicked, this, [this]() { switchPage(3); });
+    connect(m_btnQueue, &QPushButton::clicked, this, [this]() { switchPage(4); });
 
     // 状态栏
     ui->statusbar->showMessage("就绪 — 请选择分类浏览菜品");
@@ -313,8 +536,11 @@ void order_system::setupUI()
         "QStatusBar { background: #FAFAFA; color: #999999; font-size: 12px;"
         "border-top: 1px solid #E8E8E8; }");
 
-    // 默认进入推荐界面
+    // 默认进入推荐菜单
     refreshDishList("推荐");
+
+    // 开始时导航栏隐藏
+    m_topBar->setVisible(false);
 }
 
 // 页面切换
@@ -323,9 +549,9 @@ void order_system::switchPage(int index)
     m_stackedWidget->setCurrentIndex(index);
 
     // 更新按钮高亮
-    m_btnMenu->setProperty("active", index == 0);
-    m_btnCart->setProperty("active", index == 1);
-    m_btnQueue->setProperty("active", index == 2);
+    m_btnMenu->setProperty("active", index == 2);
+    m_btnCart->setProperty("active", index == 3);
+    m_btnQueue->setProperty("active", index == 4);
 
     // 刷新样式（property 改了之后必须重新 polish）
     for (auto *btn : {m_btnMenu, m_btnCart, m_btnQueue}) {
@@ -432,4 +658,33 @@ void order_system::refreshDishList(const QString &category)
 
     // 结尾弹簧
     m_dishListLayout->addStretch();
+}
+
+bool order_system::checkUser(QString name, QString password) {
+    for (size_t i = 0;i < m_users.size();i++) {
+        if (name == QString::fromStdString(m_users[i].name)) {
+            if (password == QString::fromStdString(m_users[i].password)) {
+                m_current_user = m_users[i]; // 设置当前用户
+                return true; // 登录成功
+            }
+            else {
+                return false; // 登录失败
+            }
+        }
+    }
+    return false; // 用户不存在，一样视为登录失败
+}
+
+void order_system::addUser(QString name, QString password) {
+    int id = m_users.size() + 1;
+
+    User u;
+    u.id = id;
+    u.name = name.toStdString();
+    u.password = password.toStdString();
+    u.level = 0;
+    m_users.push_back(u); // 新用户添加到用户向量
+
+    FileManager f;
+    f.addUser(id, u.name, u.password);
 }

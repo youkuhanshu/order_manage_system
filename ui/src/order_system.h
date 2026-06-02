@@ -33,6 +33,7 @@ private:
     Ui_order_system *ui;
 
     // 导航按钮
+    QFrame *m_topBar;
     QPushButton *m_btnMenu;
     QPushButton *m_btnCart;
     QPushButton *m_btnQueue;
@@ -48,6 +49,8 @@ private:
     QStackedWidget *m_stackedWidget;
 
     // 页面
+    QWidget *m_loginPage;
+    QWidget *m_registerPage;
     QWidget *m_menuPage;
     QWidget *m_cartPage;
     QWidget *m_queuePage;
@@ -67,4 +70,10 @@ private:
 
     // label
     QLabel *m_dishcount;
+
+    // 用户
+    User m_current_user;
+    std::vector<User> m_users;
+    bool checkUser(QString name, QString password);
+    void addUser(QString name, QString password);
 };

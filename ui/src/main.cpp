@@ -6,6 +6,7 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
     order_system w;
     w.show();
     return a.exec();

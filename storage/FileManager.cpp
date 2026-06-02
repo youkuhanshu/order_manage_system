@@ -1,20 +1,20 @@
 #include "FileManager.h"
 
-std::vector<Dish>     FileManager::all_dishes_cpp;
-QList<Dish_qt>        FileManager::all_dishes_qt;
-QStringList           FileManager::all_categories_qt;
-QList<Dish_qt>        FileManager::recommend_dishes_qt;
-std::vector<QueueMsg>   FileManager::all_queue_;
+std::vector<Dish> FileManager::all_dishes_cpp;
+QList<Dish_qt> FileManager::all_dishes_qt;
+QStringList FileManager::all_categories_qt;
+QList<Dish_qt> FileManager::recommend_dishes_qt;
+
+std::vector<User> FileManager::all_users_cpp;
+
+std::vector<QueueMsg> FileManager::all_queue_;
 std::vector<CommentMsg> FileManager::all_comments_;
 
 // 加载全部菜品
 void FileManager::LoadMenu() {
-    all_dishes_cpp.clear();
-    all_dishes_qt.clear();
-    all_categories_qt.clear();
+    all_users_cpp.clear();
 
     std::string line;
-
     std::ifstream ifs;
     ifs.open(MENU_FILE_PATH, std::ios::in);
 
@@ -24,6 +24,8 @@ void FileManager::LoadMenu() {
     }
 
     while (getline(ifs, line)) { // 从文件流中读取一整行文本，直到遇到换行符或文件结束
+        if (line.empty() || line[0] == '#') continue;
+
         Dish d;
         Dish_qt d_qt;
         std::stringstream ss(line);
@@ -75,7 +77,51 @@ QList<Dish_qt> FileManager::getRecommend_qt() {
     return recommend_dishes_qt;
 }
 
-// 
+// 加载全部用户
+void FileManager::LoadUsers() {
+    all_users_cpp.clear();
+
+    std::string line;
+    std::ifstream ifs;
+    
+    ifs.open(USER_FILE_PATH, std::ios::in);
+
+    if ( !ifs.is_open() ) {
+        std::cout << "无法打开用户文件" << std::endl;
+        return;
+    }
+
+    while (getline(ifs, line)) { // 从文件流中读取一整行文本，直到遇到换行符或文件结束
+        if (line.empty() || line[0] == '#') continue; // 跳过空行和注释
+
+        User u;
+        std::stringstream ss(line);
+
+        // 将用户填入vector
+        ss >> u.id >> u.name >> u.password >> u.level;
+        all_users_cpp.push_back(u);
+    }
+
+    ifs.close();
+}
+
+// 在C++中使用，获取全部用户
+std::vector<User> FileManager::getUsers_cpp() {
+    return all_users_cpp;
+}
+
+// 在C++中使用，添加用户
+void FileManager::addUser(int id, std::string name, std::string password) {
+    std::ofstream ofs;
+    int level = 0;
+
+    ofs.open(USER_FILE_PATH, std::ios::app);
+    ofs << "\n" << id << " " << name << " " << password << " " << level << std::endl;
+
+    ofs.close();
+}
+
+// 加载排队队列
 void FileManager::LoadQueue() {
     all_queue_.clear();
     std::ifstream in(QUEUE_FILE_PATH);
@@ -88,6 +134,7 @@ void FileManager::LoadQueue() {
     in.close();
 }
 
+// 在C++中使用，更新排队txt
 void FileManager::SaveQueue(const std::vector<QueueMsg>& queue) const {
     std::ofstream out(QUEUE_FILE_PATH);
     if (!out) return;
@@ -97,12 +144,12 @@ void FileManager::SaveQueue(const std::vector<QueueMsg>& queue) const {
     out.close();
 }
 
+// 在C++中使用，获取全部队列
 std::vector<QueueMsg> FileManager::getQueue() {
     return all_queue_;
 }
 
-// ---- 评论 ----
-
+// 加载所有评论
 void FileManager::LoadComments() {
     all_comments_.clear();
     std::ifstream in(COMMENT_FILE_PATH);
@@ -115,6 +162,7 @@ void FileManager::LoadComments() {
     in.close();
 }
 
+// 在C++中使用，将评论写入txt
 void FileManager::SaveComments(const std::vector<CommentMsg>& comments) const {
     std::ofstream out(COMMENT_FILE_PATH);
     if (!out) return;
@@ -124,6 +172,7 @@ void FileManager::SaveComments(const std::vector<CommentMsg>& comments) const {
     out.close();
 }
 
+// 在C++中使用，获取所有评论
 std::vector<CommentMsg> FileManager::getComments() {
     return all_comments_;
 }
