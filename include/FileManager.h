@@ -9,6 +9,9 @@
 #include <QString>
 #include <QList>
 
+#include "queue_msg.hpp"
+#include "Comment_msg.hpp"
+
 // 在C++中使用
 struct Dish
 {
@@ -36,23 +39,33 @@ struct Dish_qt
 class FileManager
 {
 private:
-    const std::string MENU_FILE_PATH = "../storage/data/menu.txt";
+    const std::string MENU_FILE_PATH    = "../storage/data/menu.txt";
+    const std::string QUEUE_FILE_PATH   = "../storage/data/queue.txt";
+    const std::string COMMENT_FILE_PATH = "../storage/data/comment.txt";
+
     static std::vector<Dish> all_dishes_cpp;
     static QList<Dish_qt> all_dishes_qt;
     static QStringList all_categories_qt;
     static QList<Dish_qt> recommend_dishes_qt;
+
+    static std::vector<QueueMsg>   all_queue_;
+    static std::vector<CommentMsg> all_comments_;
+
 public:
+    // ---- 菜单 ----
     void LoadMenu();
+    static std::vector<Dish>    getMenu_cpp();
+    static QList<Dish_qt>       getMenu_qt();
+    static QStringList          getCategories_qt();
+    static QList<Dish_qt>       getRecommend_qt();
 
-    // 在C++中使用，获取菜单
-    static std::vector<Dish> getMenu_cpp();
+    // ---- 排队 ----
+    void LoadQueue();
+    void SaveQueue(const std::vector<QueueMsg>& queue) const;
+    static std::vector<QueueMsg> getQueue();
 
-    // 在Qt中使用
-    static QList<Dish_qt> getMenu_qt();
-
-    // 在Qt中使用
-    static QStringList getCategories_qt();
-
-    // 在Qt中使用
-    static QList<Dish_qt> getRecommend_qt();
+    // ---- 评论 ----
+    void LoadComments();
+    void SaveComments(const std::vector<CommentMsg>& comments) const;
+    static std::vector<CommentMsg> getComments();
 };

@@ -5,7 +5,6 @@
 #include <map>
 #include"Comment_msg.hpp"
 #include <functional>
-#include <fstream>
 
 using CommentCallback = std::function<void(const std::string& type,const void* data)>;
 class CommentService{
@@ -34,7 +33,4 @@ public:
     double GetDishAverRate(const std::string& dish_name);
     std::vector<CommentMsg> GetDishComments(const std::string& dish_name,std::string rank_type);
 
-    //文件读写
-    void loadFromFile(const std::string& file);
-    void saveToFile(const std::string& file) const;
 };

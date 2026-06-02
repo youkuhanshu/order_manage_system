@@ -1,10 +1,13 @@
 #include "FileManager.h"
 
-std::vector<Dish> FileManager::all_dishes_cpp;
-QList<Dish_qt> FileManager::all_dishes_qt;
-QStringList FileManager::all_categories_qt;
-QList<Dish_qt> FileManager::recommend_dishes_qt;
+std::vector<Dish>     FileManager::all_dishes_cpp;
+QList<Dish_qt>        FileManager::all_dishes_qt;
+QStringList           FileManager::all_categories_qt;
+QList<Dish_qt>        FileManager::recommend_dishes_qt;
+std::vector<QueueMsg>   FileManager::all_queue_;
+std::vector<CommentMsg> FileManager::all_comments_;
 
+// 加载全部菜品
 void FileManager::LoadMenu() {
     all_dishes_cpp.clear();
     all_dishes_qt.clear();
@@ -52,7 +55,7 @@ void FileManager::LoadMenu() {
     ifs.close();
 }
 
-// 在C++中使用
+// 在C++中使用，获取全部菜品
 std::vector<Dish> FileManager::getMenu_cpp() {
     return all_dishes_cpp;
 }
@@ -70,4 +73,57 @@ QStringList FileManager::getCategories_qt() {
 // 在Qt中使用
 QList<Dish_qt> FileManager::getRecommend_qt() {
     return recommend_dishes_qt;
+}
+
+// 
+void FileManager::LoadQueue() {
+    all_queue_.clear();
+    std::ifstream in(QUEUE_FILE_PATH);
+    if (!in) return;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty()) continue;
+        all_queue_.push_back(QueueMsg::from_String(line));
+    }
+    in.close();
+}
+
+void FileManager::SaveQueue(const std::vector<QueueMsg>& queue) const {
+    std::ofstream out(QUEUE_FILE_PATH);
+    if (!out) return;
+    for (const auto& msg : queue) {
+        out << msg.to_String() << "\n";
+    }
+    out.close();
+}
+
+std::vector<QueueMsg> FileManager::getQueue() {
+    return all_queue_;
+}
+
+// ---- 评论 ----
+
+void FileManager::LoadComments() {
+    all_comments_.clear();
+    std::ifstream in(COMMENT_FILE_PATH);
+    if (!in) return;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        all_comments_.push_back(CommentMsg::from_String(line));
+    }
+    in.close();
+}
+
+void FileManager::SaveComments(const std::vector<CommentMsg>& comments) const {
+    std::ofstream out(COMMENT_FILE_PATH);
+    if (!out) return;
+    for (const auto& msg : comments) {
+        out << msg.to_String() << "\n";
+    }
+    out.close();
+}
+
+std::vector<CommentMsg> FileManager::getComments() {
+    return all_comments_;
 }

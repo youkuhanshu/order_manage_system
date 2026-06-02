@@ -59,30 +59,4 @@ std::vector<QueueMsg> QueueService::getWaiting(){
     return waiting_;
 }
 
-//文件读写
-void QueueService::loadFromFile(const std::string& file){
-    std::ifstream in(file);
-    if(!in){
-        return;
-    }
-    waiting_.clear();
-    std::string line;
-    while(std::getline(in,line)){
-        if(line.empty()){
-            continue;
-        }
-        waiting_.push_back(QueueMsg::from_String(line));
-    }
-    in.close();
-}
-void QueueService::saveToFile(const std::string& file) const{
-    std::ofstream out(file);
-    if(!out){
-        return;
-    }
-    for(const auto& msg : waiting_){
-        out << msg.to_String() << std::endl;  
-    }
-    out.close();
-}
 

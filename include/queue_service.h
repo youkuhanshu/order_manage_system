@@ -4,7 +4,6 @@
 #include <vector>
 #include"queue_msg.hpp"
 #include <functional>
-#include <fstream>
 
 using QueueCallback = std::function<void(const std::string& type,const void* data)>;
 #define time_threshold 6000 //单位是秒
@@ -34,7 +33,4 @@ public:
     int getQueueID(QueueMsg msg){};
     std::vector<QueueMsg> getWaiting(){};
 
-    //文件读写
-    void loadFromFile(const std::string& file);
-    void saveToFile(const std::string& file) const;
 };

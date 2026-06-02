@@ -75,29 +75,3 @@
         return com;
     }
 
-    //文件读写
-    void CommentService::loadFromFile(const std::string& file){
-        std::ifstream in(file);
-        if(!in){
-            return;
-        }
-        All_Comments_.clear();
-        std::string line;
-        while(std::getline(in,line)){
-            if(line.empty()){
-                continue;
-            }
-            All_Comments_.push_back(CommentMsg::from_String(line));
-            }
-        in.close();
-    }
-    void CommentService::saveToFile(const std::string& file) const{
-         std::ofstream out(file);
-        if(!out){
-            return;
-        }
-        for(const auto& msg : All_Comments_){
-            out << msg.to_String() << std::endl;  
-        }
-        out.close();    
-    }
