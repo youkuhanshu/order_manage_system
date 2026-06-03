@@ -47,10 +47,11 @@ static CommentMsg from_String(const std::string& str){
         int last = 0;
         for(int i = 0;i < len;i++){
             if(dish_ids_str[i] == ','){
-                msg.dish_ids.push_back(dish_ids_str.substr(last,i - last -1));
+                msg.dish_ids.push_back(dish_ids_str.substr(last, i - last));
                 last = i+1;
             }
         }
+        if(last < len) msg.dish_ids.push_back(dish_ids_str.substr(last));  // 处理无尾逗号的最后一项
         return msg;
     }
     //等着加个失败管理

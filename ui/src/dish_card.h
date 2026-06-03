@@ -17,6 +17,7 @@ public:
 
 signals: // 声明一个自定义信号
     void addClicked(int dishId);
+    void commentClicked(int dishId);
 
 private:
     void setupUI(const Dish_qt &dish);

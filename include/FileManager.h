@@ -19,21 +19,23 @@ struct Dish
     std::string name;       // 菜名
     double price;       // 价格（元）
     std::string description; // 说明
-    int sales;       // 销量
-    double rating;      // 平均评分
-    std::string category;   // 分类
+    int sales;            // 销量
+    double rating;        // 平均评分
+    std::string category; // 分类
+    int comment_count;    // 评论个数
 };
 
 // 在Qt中使用
 struct Dish_qt
 {
-    int id;          // 编号
-    QString name;       // 菜名
-    double price;       // 价格（元）
+    int id;              // 编号
+    QString name;        // 菜名
+    double price;        // 价格（元）
     QString description; // 说明
-    int sales;       // 销量
-    double rating;      // 平均评分
-    QString category;   // 分类
+    int sales;           // 销量
+    double rating;       // 平均评分
+    QString category;    // 分类
+    int comment_count;   // 评论个数
 };
 
 // 在C++中使用，用户
@@ -56,7 +58,9 @@ private:
     static std::vector<Dish> all_dishes_cpp;
     static QList<Dish_qt> all_dishes_qt;
     static QStringList all_categories_qt;
-    static QList<Dish_qt> recommend_dishes_qt;
+    static QList<Dish_qt> recommend_by_sales;
+    static QList<Dish_qt> recommend_by_rating;
+    static QList<Dish_qt> recommend_by_comments;
 
     static std::vector<User> all_users_cpp;
 
@@ -70,6 +74,9 @@ public:
     static QList<Dish_qt> getMenu_qt();
     static QStringList getCategories_qt();
     static QList<Dish_qt> getRecommend_qt();
+    static QList<Dish_qt> getRecommendBySales();
+    static QList<Dish_qt> getRecommendByRating();
+    static QList<Dish_qt> getRecommendByComments();
 
     // 用户
     void LoadUsers();
@@ -84,5 +91,6 @@ public:
     // 评论
     void LoadComments();
     void SaveComments(const std::vector<CommentMsg>& comments) const;
+    void AddCommentAndUpdateMenu(const CommentMsg& comment);
     static std::vector<CommentMsg> getComments();
 };

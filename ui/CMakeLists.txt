@@ -16,6 +16,7 @@ aux_source_directory(./src srcs)
 
 # 添加 storage 目录下的源文件
 list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/../storage/FileManager.cpp)
+list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/comment_dialog.cpp)
 
 # Specify MSVC UTF-8 encoding   
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")

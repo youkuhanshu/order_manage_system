@@ -1,5 +1,6 @@
 #include "order_system.h"
 #include "dish_card.h"
+#include "comment_dialog.h"
 
 #include <QApplication>
 #include <QDir>
@@ -39,9 +40,13 @@ void order_system::loadData()
     FileManager fileManager;
     fileManager.LoadMenu();
     fileManager.LoadUsers();
+    fileManager.LoadComments();
+    m_allComments = fileManager.getComments();
     m_allItems  = fileManager.getMenu_qt();
     m_categories = fileManager.getCategories_qt();
-    m_recommendItems = fileManager.getRecommend_qt();
+    m_recommend_by_sales = fileManager.getRecommendBySales();
+    m_recommend_by_rating = fileManager.getRecommendByRating();
+    m_recommend_by_comments = fileManager.getRecommendByComments();
     m_users = fileManager.getUsers_cpp();
 
     if (m_allItems.isEmpty()) {
@@ -634,10 +639,21 @@ void order_system::refreshDishList(const QString &category)
     }
 
     if (category == "推荐") {
-        // 添加不同排序方式
-        for (const auto &item : m_recommendItems) {
+        QList<Dish_qt> recommenditems;
+        if (m_recommendMethod == "销量最高") {
+            recommenditems = m_recommend_by_sales;
+        }
+        else if (m_recommendMethod == "评分最高") {
+            recommenditems = m_recommend_by_rating;
+        }
+        else if (m_recommendMethod == "最多评价") {
+            recommenditems = m_recommend_by_comments;
+        }
+
+        for (const auto &item : recommenditems) {
             auto *card = new DishCard(item, m_dishContainer);
             connect(card, &DishCard::addClicked, this, &order_system::onAddDish);
+            connect(card, &DishCard::commentClicked, this, &order_system::onShowComments);
             m_dishListLayout->addWidget(card);
             dishcount++;
         }
@@ -648,6 +664,7 @@ void order_system::refreshDishList(const QString &category)
             if (item.category == category || category == "全部") {
                 auto *card = new DishCard(item, m_dishContainer);
                 connect(card, &DishCard::addClicked, this, &order_system::onAddDish);
+                connect(card, &DishCard::commentClicked, this, &order_system::onShowComments);
                 m_dishListLayout->addWidget(card);
                 dishcount++;
             }
@@ -660,6 +677,7 @@ void order_system::refreshDishList(const QString &category)
     m_dishListLayout->addStretch();
 }
 
+// 登录
 bool order_system::checkUser(QString name, QString password) {
     for (size_t i = 0;i < m_users.size();i++) {
         if (name == QString::fromStdString(m_users[i].name)) {
@@ -675,6 +693,7 @@ bool order_system::checkUser(QString name, QString password) {
     return false; // 用户不存在，一样视为登录失败
 }
 
+// 添加用户
 void order_system::addUser(QString name, QString password) {
     int id = m_users.size() + 1;
 
@@ -687,4 +706,16 @@ void order_system::addUser(QString name, QString password) {
 
     FileManager f;
     f.addUser(id, u.name, u.password);
+}
+
+// 弹出评论弹窗
+void order_system::onShowComments(int dishId)
+{
+    for (const auto &dish : m_allItems) {
+        if (dish.id == dishId) {
+            CommentDialog dlg(dish, this);
+            dlg.exec();
+            return;
+        }
+    }
 }

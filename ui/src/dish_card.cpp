@@ -102,6 +102,16 @@ void DishCard::setupUI(const Dish_qt &dish)
         "border: none; background: transparent;");
     statsLayout->addWidget(m_salesLabel);
 
+    auto *commentBtn = new QPushButton("查看评论 ›", this);
+    commentBtn->setCursor(Qt::PointingHandCursor);
+    commentBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none;"
+        "font-size: 11px; color: #AAAAAA; padding: 0; }"
+        "QPushButton:hover { color: #0085FF; }");
+    connect(commentBtn, &QPushButton::clicked, this, [this]() {
+        emit commentClicked(m_dish.id);
+    });
+    statsLayout->addWidget(commentBtn);
     statsLayout->addStretch();
     infoLayout->addLayout(statsLayout);
 

@@ -21,6 +21,7 @@ public:
 private slots:
     void onCategoryChanged(int row);
     void onAddDish(int dishId);
+    void onShowComments(int dishId);
     void switchPage(int index);
 
 private:
@@ -65,7 +66,10 @@ private:
 
     // 数据
     QList<Dish_qt> m_allItems;
-    QList<Dish_qt> m_recommendItems;
+    QList<Dish_qt> m_recommend_by_sales;
+    QList<Dish_qt> m_recommend_by_rating;
+    QList<Dish_qt> m_recommend_by_comments;
+    std::vector<CommentMsg> m_allComments;
     QStringList m_categories;
 
     // label
