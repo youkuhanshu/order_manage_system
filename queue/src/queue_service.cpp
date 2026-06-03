@@ -1,7 +1,7 @@
 #include "include/queue_service.h"
 
 //构造
-QueueService::QueueService():current_eating(0),next_giving(1001){}
+QueueService::QueueService():current_calling(0),next_giving(1001){}
 
 //注册回调函数
 void QueueService::setQueueCallback(QueueCallback callback){
@@ -24,8 +24,9 @@ void QueueService::advance_queue(){
     if(is_Empty()){
         return;
     }
+    taking_.push_back(*waiting_.begin());
     waiting_.erase(waiting_.begin());
-    current_eating++;
+    current_calling++;
 
     if(on_updated_){
         on_updated_("advance_queue",&waiting_);
@@ -49,8 +50,8 @@ bool QueueService::is_too_long(){
 }
 
 //接口
-int QueueService::getCurentEating(){    
-    return current_eating;
+int QueueService::getCurentCall(){    
+    return current_calling;
 }
 int QueueService::getQueueID(QueueMsg msg){
     return msg.queue_id;
@@ -58,5 +59,6 @@ int QueueService::getQueueID(QueueMsg msg){
 std::vector<QueueMsg> QueueService::getWaiting(){
     return waiting_;
 }
-
-
+std::vector<QueueMsg> QueueService::getTaking(){
+    return taking_;
+}
