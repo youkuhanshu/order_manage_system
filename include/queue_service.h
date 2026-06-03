@@ -10,9 +10,10 @@ using QueueCallback = std::function<void(const std::string& type,const void* dat
 
 class QueueService{
 private:
-    int current_eating;                  //现在叫到号数
+    int current_calling;                  //现在叫到号数
     int next_giving;                     //下一个应给号数
     std::vector<QueueMsg> waiting_;      //排队队列
+    std::vector<QueueMsg> taking_;       //取餐队列
     QueueCallback on_updated_;           //回调函数
 public:
     //构造析构函数
@@ -29,8 +30,9 @@ public:
     bool is_too_long();             //等待时间是否超过阈值
 
     //接口
-    int getCurentEating(){};
+    int getCurentCall(){};
     int getQueueID(QueueMsg msg){};
     std::vector<QueueMsg> getWaiting(){};
+    std::vector<QueueMsg> getTaking(){};
 
 };
