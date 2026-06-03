@@ -63,5 +63,6 @@ struct DishComment_msg{
     double aver_rate;                    //该菜品平均分
     int dish_comment_num;                //该菜品评论数
     std::vector<CommentMsg> comments;    //该菜品对应评论
-    std::vector<int> rate_rank;          //分数排列评论索引
+    std::vector<int> rate_rank;          //该菜品评论分数排列索引
+    static std::vector<std::string> all_dish_rate_rank;    //全菜品平均分排名索引
 };
