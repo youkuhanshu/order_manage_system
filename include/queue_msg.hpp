@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <ctime>
+#include <QDateTime>
 
 struct QueueMsg{
 int queue_id;               //拿到的队列号

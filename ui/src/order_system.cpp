@@ -193,14 +193,13 @@ void order_system::setupUI()
     m_loginPage = new LoginPage();
     connect(m_loginPage, &LoginPage::loginClicked, this, [this](const QString &name, const QString &password) {
         if (checkUser(name, password)) {
+            m_orderService = new OrderService(m_currentUser);
             m_navBar->setUser(m_currentUser);
             m_navBar->setVisible(true);
             m_menuPage->setData(m_allItems, m_bySales, m_byRating, m_byComments, m_categories);
-            m_menuPage->setDiscountRate(discountRateForUser(m_currentUser));
+            m_menuPage->setDiscountRate(m_orderService->getDiscountRate(m_currentUser));
             switchPage(2);
-
-            m_orderService = new OrderService(m_currentUser);
-        } 
+        }
         else {
             QMessageBox::warning(this, "登录失败", "用户名或密码不正确！");
         }
@@ -212,10 +211,11 @@ void order_system::setupUI()
     m_registerPage = new RegisterPage();
     connect(m_registerPage, &RegisterPage::registerClicked, this, [this](const QString &name, const QString &password) {
         doRegister(name, password);
+        m_orderService = new OrderService(m_currentUser);
         m_navBar->setUser(m_currentUser);
         m_navBar->setVisible(true);
         m_menuPage->setData(m_allItems, m_bySales, m_byRating, m_byComments, m_categories);
-        m_menuPage->setDiscountRate(1.0); // 新用户是 REGULAR
+        m_menuPage->setDiscountRate(m_orderService->getDiscountRate(m_currentUser));
         switchPage(2);
     });
 
@@ -246,7 +246,7 @@ void order_system::setupUI()
     connect(m_cartPage, &CartPage::clearCartRequested, this, [this]() {
         m_orderService->clearOrder();
         m_navBar->setDishCount(0);
-        m_cartPage->setCart({}, discountRateForUser(m_currentUser));
+        m_cartPage->setCart({}, m_orderService->getDiscountRate(m_currentUser));
     });
 
     connect(m_cartPage, &CartPage::increaseRequested, this, [this](int dishId) {
@@ -258,14 +258,14 @@ void order_system::setupUI()
             }
         }
         QList<Dish_qt> qtOrder = buildQtOrder();
-        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+        m_cartPage->setCart(qtOrder, m_orderService->getDiscountRate(m_currentUser));
         m_navBar->setDishCount(qtOrder.size());
     });
 
     connect(m_cartPage, &CartPage::decreaseRequested, this, [this](int dishId) {
         m_orderService->removeOneDish(dishId);
         QList<Dish_qt> qtOrder = buildQtOrder();
-        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+        m_cartPage->setCart(qtOrder, m_orderService->getDiscountRate(m_currentUser));
         m_navBar->setDishCount(qtOrder.size());
     });
 
@@ -289,10 +289,26 @@ void order_system::setupUI()
         m_orderService->clearOrder();
         m_navBar->setUser(m_currentUser);
         m_navBar->setDishCount(0);
-        m_menuPage->setDiscountRate(discountRateForUser(m_currentUser));
+        m_menuPage->setDiscountRate(m_orderService->getDiscountRate(m_currentUser));
+
+        // 结算后加入排队队列，拿到取餐号
+        m_myQueueId = m_queueService.in_queue(m_nextOrderId++);
 
         QMessageBox::information(this, "结算成功",
-            QString("本次实付 ¥%1\n感谢您的惠顾！").arg(total, 0, 'f', 2));
+            QString("本次实付 ¥%1\n您的取餐号：%2\n可在「排队进度」查看进度")
+                .arg(total, 0, 'f', 2).arg(m_myQueueId));
+        switchPage(2);
+    });
+
+    // ---- 排队页信号连接 ----
+    connect(m_queuePage, &QueuePage::refreshRequested, this, [this]() {
+        refreshQueuePage();
+    });
+    connect(m_queuePage, &QueuePage::advanceRequested, this, [this]() {
+        m_queueService.advance_queue();   // 前台叫下一位取餐
+        refreshQueuePage();
+    });
+    connect(m_queuePage, &QueuePage::backToMenuRequested, this, [this]() {
         switchPage(2);
     });
 
@@ -317,10 +333,23 @@ void order_system::switchPage(int index)
     // 切换到购物车页前先刷新显示
     if (index == 3 && m_orderService != nullptr) {
         QList<Dish_qt> qtOrder = buildQtOrder();
-        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+        m_cartPage->setCart(qtOrder, m_orderService->getDiscountRate(m_currentUser));
+    }
+    // 切换到排队页前先刷新进度
+    if (index == 4) {
+        refreshQueuePage();
     }
     m_stackedWidget->setCurrentIndex(index);
     m_navBar->setActiveNav(index);
+}
+
+//  把排队快照刷到 QueuePage
+void order_system::refreshQueuePage()
+{
+    m_queuePage->setQueueData(m_queueService.getCurentCall(),
+                              m_queueService.getWaiting(),
+                              m_queueService.getTaking(),
+                              m_myQueueId);
 }
 
 //  把后端 order_ 转成 QList<Dish_qt>
@@ -364,10 +393,3 @@ void order_system::doRegister(const QString &name, const QString &password)
     m_fl.addUser(u.id, u.name, u.password);
 }
 
-double order_system::discountRateForUser(const User &u) const
-{
-    if (u.level == "SILVER") return 0.95;
-    if (u.level == "GOLD") return 0.85;
-    if (u.level == "PLATINUM") return 0.75;
-    return 1.0;
-}
