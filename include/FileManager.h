@@ -45,7 +45,7 @@ struct User
     std::string name;
     std::string password;
     std::string level;
-    double sum_spent;
+    double total_spent;
 };
 
 class FileManager
