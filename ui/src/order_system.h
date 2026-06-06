@@ -1,16 +1,18 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QListWidget>
-#include <QVBoxLayout>
-#include <QScrollArea>
-#include <QLabel>
-#include <QPushButton>
 #include <QStackedWidget>
-#include <QEvent>
 #include "ui_order_system.h"
 #include "FileManager.h"
+#include "Order_mgr.hpp"
+#include "nav_bar.h"
+#include "auth_page.h"
+#include "menu_page.h"
+#include "cart_page.h"
+#include "queue_page.h"
 
+/// 主窗口
+/// 职责：组装各页面组件、处理登录/注册业务逻辑、在各组件之间传递信号
 class order_system : public QMainWindow
 {
     Q_OBJECT
@@ -19,76 +21,35 @@ public:
     explicit order_system(QWidget *parent = nullptr);
     ~order_system();
 
-protected:
-    bool eventFilter(QObject *obj, QEvent *event) override;
-
-private slots:
-    void onCategoryChanged(int row);
-    void onAddDish(int dishId);
-    void onShowComments(int dishId);
-    void switchPage(int index);
-
 private:
     void loadData();
     void setupUI();
-    void refreshDishList(const QString &category = QString());
-    void switchRecommendMethod(int index);
-    void updateUserInfo();
-    QString m_recommendMethod;
+    void switchPage(int index);
+    bool checkUser(const QString &name, const QString &password);
+    void doRegister(const QString &name, const QString &password);
+    User u;
 
+    // 登录成功后计算折扣率
+    double discountRateForUser(const User &u) const;
+
+    // 界面和组件
     Ui_order_system *ui;
 
-    // 导航栏
-    QFrame      *m_topBar;
-    QFrame      *m_userPanel;       // 左侧用户信息区域（可点击）
-    QLabel      *m_userAvatarLabel; // 头像圆圈
-    QLabel      *m_userNameLabel;   // 用户名
-    QLabel      *m_userLevelLabel;  // 会员等级
-
-    // 导航按钮
-    QPushButton *m_btnMenu;
-    QPushButton *m_btnCart;
-    QPushButton *m_btnQueue;
-
-    // 推荐按钮
-    QPushButton *m_mostSaled;
-    QPushButton *m_highScore;
-    QPushButton *m_mostCommented;
-    // 推荐按钮容器
-    QFrame *m_recommendBar;
-
-    // 页面容器
+    NavBar *m_navBar;
     QStackedWidget *m_stackedWidget;
-
-    // 页面
-    QWidget *m_loginPage;
-    QWidget *m_registerPage;
-    QWidget *m_menuPage;
-    QWidget *m_cartPage;
-    QWidget *m_queuePage;
-
-    // 菜单页：左侧分类列表
-    QListWidget *m_categoryList;
-
-    // 菜单页：右侧菜品区域
-    QScrollArea *m_scrollArea;
-    QWidget *m_dishContainer;
-    QVBoxLayout *m_dishListLayout;
+    LoginPage *m_loginPage;
+    RegisterPage *m_registerPage;
+    MenuPage *m_menuPage;
+    CartPage *m_cartPage;
+    QueuePage *m_queuePage;
 
     // 数据
     QList<Dish_qt> m_allItems;
-    QList<Dish_qt> m_recommend_by_sales;
-    QList<Dish_qt> m_recommend_by_rating;
-    QList<Dish_qt> m_recommend_by_comments;
+    QList<Dish_qt> m_bySales;
+    QList<Dish_qt> m_byRating;
+    QList<Dish_qt> m_byComments;
     std::vector<CommentMsg> m_allComments;
     QStringList m_categories;
-
-    // label
-    QLabel *m_dishcount;
-
-    // 用户
-    User m_current_user;
     std::vector<User> m_users;
-    bool checkUser(QString name, QString password);
-    void addUser(QString name, QString password);
+    User m_currentUser;
 };

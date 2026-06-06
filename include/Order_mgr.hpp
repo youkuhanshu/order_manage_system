@@ -6,7 +6,7 @@
 
 class OrderService{
 public:
-    OrderService(const User& user) : user_(user), order_(), order_history_(), total_price_(0.0) {}
+    OrderService(const User& user) : user_(user), order_history_(), total_price_(0.0) {}
     virtual ~OrderService() = default;
 
     virtual void addDish(const Dish& dish);

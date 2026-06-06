@@ -8,46 +8,92 @@
 
 #include <QString>
 #include <QList>
+#include <QStringList>
+#include <QDateTime>
 
 #include "queue_msg.hpp"
 #include "Comment_msg.hpp"
 
-// 在C++中使用，菜品
+// 前置声明（toQt / toCpp 互相引用，需要提前声明目标类型）
+struct Dish_qt;
+struct User_qt;
+struct QueueMsg_qt;
+struct CommentMsg_qt;
+struct DishComment_msg_qt;
+
+// 菜品
+
+// C++ 版，供后端逻辑使用
 struct Dish
 {
-    int id;          // 编号
-    std::string name;       // 菜名
-    double price;       // 价格（元）
-    std::string description; // 说明
-    int sales;            // 销量
-    double rating;        // 平均评分
-    std::string category; // 分类
-    int comment_count;    // 评论个数
+    int id;
+    std::string name;
+    double price;
+    std::string description;
+    int sales;
+    double rating;
+    std::string category;
+    int comment_count;
 };
 
-// 在Qt中使用
+// Qt 版，供 UI 使用
 struct Dish_qt
 {
-    int id;              // 编号
-    QString name;        // 菜名
-    double price;        // 价格（元）
-    QString description; // 说明
-    int sales;           // 销量
-    double rating;       // 平均评分
-    QString category;    // 分类
-    int comment_count;   // 评论个数
+    int id;
+    QString name;
+    double price;
+    QString description;
+    int sales;
+    double rating;
+    QString category;
+    int comment_count;
 };
 
-// 在C++中使用，用户
+// 用户
+
+// C++ 版，供后端逻辑使用
 struct User
 {
     int id;
     std::string name;
     std::string password;
-    std::string level;
+    std::string level; // "REGULAR" | "SILVER" | "GOLD" | "PLATINUM"
     double total_spent;
 };
 
+// Qt 版，供 UI 使用
+struct User_qt
+{
+    int id;
+    QString name;
+    QString password;
+    QString level; // "REGULAR" | "SILVER" | "GOLD" | "PLATINUM"
+    double total_spent;
+};
+
+// 评论消息
+
+// Qt 版，供 UI 使用
+struct CommentMsg_qt
+{
+    QString user_id;
+    QStringList dish_ids;  // 支持多菜品评论
+    QString comment;
+    int rate;
+    QDateTime in_time;
+};
+
+// Qt 版，供 UI 使用
+struct DishComment_msg_qt
+{
+    double aver_rate;         // 该菜品平均分
+    int dish_comment_num;  // 该菜品评论数
+    QList<CommentMsg_qt> comments;          // 该菜品对应评论
+    QList<int> rate_rank;         // 评论分数排列索引
+    static QStringList all_dish_rate_rank; // 全菜品平均分排名索引
+};
+
+// FileManager —— 文件读写
 class FileManager
 {
 private:
@@ -64,7 +110,6 @@ private:
     static QList<Dish_qt> recommend_by_comments;
 
     static std::vector<User> all_users_cpp;
-
     static std::vector<QueueMsg> all_queue_;
     static std::vector<CommentMsg> all_comments_;
 
@@ -93,4 +138,16 @@ public:
     void SaveComments(const std::vector<CommentMsg>& comments) const;
     void AddCommentAndUpdateMenu(const CommentMsg& comment);
     static std::vector<CommentMsg> getComments();
+
+    // 类型转换
+    User_qt user_to_qt(const User& user_cpp);
+    User user_to_cpp(const User_qt& user_qt);
+    Dish_qt dish_to_qt(Dish& dish_cpp);
+    Dish dish_to_cpp(const Dish_qt& dish_qt);
+    QueueMsg queuemsg_to_cpp(const QueueMsg_qt& q);
+    QueueMsg_qt queuemsg_to_qt(const QueueMsg& msg);
+    CommentMsg commentmsg_to_cpp(const CommentMsg_qt& q);
+    CommentMsg_qt commentmsg_to_qt(const CommentMsg& msg);
+    DishComment_msg dishcomment_to_cpp(const DishComment_msg_qt& q);
+    DishComment_msg_qt dishcomment_to_qt(const DishComment_msg& msg);
 };

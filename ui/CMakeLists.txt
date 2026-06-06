@@ -5,18 +5,19 @@ set(CMAKE_PREFIX_PATH "D:/Qt/6.11.1/mingw_64") # Qt Kit Dir
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 COMPONENTS Widgets REQUIRED) # Qt COMPONENTS
 
 # 添加项目根目录的 include 路径
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-aux_source_directory(./src srcs)
+# 用 GLOB + CONFIGURE_DEPENDS：新增/删除 src 下的 .cpp 时会自动重新配置，
+# 避免出现“新加的文件没被编译 → 链接报 undefined reference”的问题。
+file(GLOB srcs CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
-# 添加 storage 目录下的源文件
+# 添加 storage 目录下的源文件（不在 src 目录内，需显式加入）
 list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/../storage/FileManager.cpp)
-list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/comment_dialog.cpp)
 
 # Specify MSVC UTF-8 encoding   
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")

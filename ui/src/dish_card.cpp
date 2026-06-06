@@ -3,7 +3,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
-// ---- 分类色板 --------------------------------------------------
+// 分类色板 
 static const char *categoryColor(const QString &category)
 {
     if (category == "热菜") return "#FF6B4A";
@@ -13,9 +13,7 @@ static const char *categoryColor(const QString &category)
     return "#BBBBBB";
 }
 
-// ================================================================
 //  DishCard
-// ================================================================
 DishCard::DishCard(const Dish_qt &dish, double discountRate, QWidget *parent)
     : QFrame(parent), m_dish(dish), m_discountRate(discountRate), m_memberPriceLabel(nullptr)
 {
@@ -140,7 +138,8 @@ void DishCard::setupUI(const Dish_qt &dish)
             "border: none; background: transparent;");
         m_memberPriceLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         rightLayout->addWidget(m_memberPriceLabel);
-    } else {
+    }
+    else {
         // 普通价格
         m_priceLabel = new QLabel(QString("¥%1").arg(dish.price, 0, 'f', 0), this);
         m_priceLabel->setStyleSheet(

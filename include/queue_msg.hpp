@@ -34,3 +34,10 @@ static QueueMsg from_String(const std::string& str){
     return msg;
 }
 };
+
+struct QueueMsg_qt
+{
+    int queue_id;  // 队列号
+    int order_id;  // 订单号
+    QDateTime in_time;   // 入队时间
+};
