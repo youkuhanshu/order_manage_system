@@ -5,6 +5,7 @@
 #include "ui_order_system.h"
 #include "FileManager.h"
 #include "Order_mgr.hpp"
+#include "queue_service.h"
 #include "nav_bar.h"
 #include "auth_page.h"
 #include "menu_page.h"
@@ -27,10 +28,8 @@ private:
     void switchPage(int index);
     bool checkUser(const QString &name, const QString &password);
     void doRegister(const QString &name, const QString &password);
+    void refreshQueuePage();   // 把排队快照刷到 QueuePage
     User u;
-
-    // 登录成功后计算折扣率
-    double discountRateForUser(const User &u) const;
 
     // 界面和组件
     Ui_order_system *ui;
@@ -55,6 +54,11 @@ private:
 
     // 菜单
     OrderService *m_orderService = nullptr;
+
+    // 排队
+    QueueService m_queueService;     // 复用后端排队逻辑
+    int m_nextOrderId = 101;         // 简单的订单号自增
+    int m_myQueueId   = -1;          // 当前用户最近一次的取餐号
 
     FileManager m_fl;
 
