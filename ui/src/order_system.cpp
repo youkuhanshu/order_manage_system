@@ -7,6 +7,7 @@
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMenu>
 
 order_system::order_system(QWidget *parent)
     : QMainWindow(parent)
@@ -82,18 +83,54 @@ void order_system::setupUI()
     topLayout->setContentsMargins(20, 0, 20, 0);
     topLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
-    auto *icon = new QLabel(QString::fromUtf8("🍽"), m_topBar);
-    icon->setStyleSheet("font-size: 24px; border: none; background: transparent;");
-    topLayout->addWidget(icon);
+    // ---- 用户信息区域（可点击，弹出退出登录菜单）----
+    m_userPanel = new QFrame(m_topBar);
+    m_userPanel->setObjectName("userPanel");
+    m_userPanel->setCursor(Qt::PointingHandCursor);
+    m_userPanel->setStyleSheet(R"(
+        #userPanel {
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+        }
+        #userPanel:hover {
+            background: #F5F5F5;
+        }
+    )");
+    m_userPanel->installEventFilter(this);
 
-    auto *title = new QLabel("饱了么", m_topBar);
-    title->setStyleSheet(
-        "font-size: 18px; font-weight: bold; color: #333333;"
-        "border: none; background: transparent;"
-    );
-    topLayout->addWidget(title);
+    auto *userPanelLayout = new QHBoxLayout(m_userPanel);
+    userPanelLayout->setContentsMargins(8, 0, 8, 0);
+    userPanelLayout->setSpacing(8);
 
-    topLayout->addSpacing(30);
+    m_userAvatarLabel = new QLabel(m_userPanel);
+    m_userAvatarLabel->setFixedSize(34, 34);
+    m_userAvatarLabel->setAlignment(Qt::AlignCenter);
+    m_userAvatarLabel->setStyleSheet(
+        "background: #CCCCCC; border-radius: 17px;"
+        "color: #FFFFFF; font-size: 14px; font-weight: bold; border: none;");
+
+    auto *userTextLayout = new QVBoxLayout();
+    userTextLayout->setSpacing(1);
+    userTextLayout->setAlignment(Qt::AlignVCenter);
+
+    m_userNameLabel = new QLabel(m_userPanel);
+    m_userNameLabel->setStyleSheet(
+        "font-size: 13px; font-weight: 600; color: #474747;"
+        "border: none; background: transparent;");
+
+    m_userLevelLabel = new QLabel(m_userPanel);
+    m_userLevelLabel->setStyleSheet(
+        "font-size: 11px; color: #AAAAAA;"
+        "border: none; background: transparent;");
+
+    userTextLayout->addWidget(m_userNameLabel);
+    userTextLayout->addWidget(m_userLevelLabel);
+    userPanelLayout->addWidget(m_userAvatarLabel);
+    userPanelLayout->addLayout(userTextLayout);
+
+    topLayout->addWidget(m_userPanel);
+    topLayout->addSpacing(20);
 
     // 导航按钮样式
     QString navBtnStyle = R"(
@@ -242,8 +279,10 @@ void order_system::setupUI()
     connect(loginBtn, &QPushButton::clicked, this, [this, usernameEdit, passwordEdit]() {
         bool success = checkUser(usernameEdit->text(), passwordEdit->text());
         if (success) {
+            updateUserInfo();
+            m_topBar->setVisible(true);
             switchPage(2);
-            m_topBar->setVisible(true); // 显示导航栏
+            refreshDishList(m_categoryList->currentItem()->text());
         }
         else {
             QMessageBox::warning(this, "登录失败", "用户名或密码不正确！");
@@ -344,8 +383,10 @@ void order_system::setupUI()
         }
         else {
             addUser(regUserEdit->text(), regPwdEdit->text());
+            updateUserInfo();
+            m_topBar->setVisible(true);
             switchPage(2);
-            m_topBar->setVisible(true); // 显示导航栏
+            refreshDishList(m_categoryList->currentItem()->text());
         }
     });
     connect(toLoginBtn, &QPushButton::clicked, this, [this]() {
@@ -638,6 +679,12 @@ void order_system::refreshDishList(const QString &category)
         delete child;
     }
 
+    // 根据当前用户等级计算折扣率
+    double discountRate = 1.0;
+    if      (m_current_user.level == "SILVER")   discountRate = 0.95;
+    else if (m_current_user.level == "GOLD")     discountRate = 0.85;
+    else if (m_current_user.level == "PLATINUM") discountRate = 0.75;
+
     if (category == "推荐") {
         QList<Dish_qt> recommenditems;
         if (m_recommendMethod == "销量最高") {
@@ -651,7 +698,7 @@ void order_system::refreshDishList(const QString &category)
         }
 
         for (const auto &item : recommenditems) {
-            auto *card = new DishCard(item, m_dishContainer);
+            auto *card = new DishCard(item, discountRate, m_dishContainer);
             connect(card, &DishCard::addClicked, this, &order_system::onAddDish);
             connect(card, &DishCard::commentClicked, this, &order_system::onShowComments);
             m_dishListLayout->addWidget(card);
@@ -662,7 +709,7 @@ void order_system::refreshDishList(const QString &category)
         // 筛选
         for (const auto &item : m_allItems) {
             if (item.category == category || category == "全部") {
-                auto *card = new DishCard(item, m_dishContainer);
+                auto *card = new DishCard(item, discountRate, m_dishContainer);
                 connect(card, &DishCard::addClicked, this, &order_system::onAddDish);
                 connect(card, &DishCard::commentClicked, this, &order_system::onShowComments);
                 m_dishListLayout->addWidget(card);
@@ -718,4 +765,71 @@ void order_system::onShowComments(int dishId)
             return;
         }
     }
+}
+
+// 刷新顶栏用户信息（登录/注册成功后调用）
+void order_system::updateUserInfo()
+{
+    static const char *avatarColors[] = {
+        "#FF6B4A", "#5DADE2", "#58D68D",
+        "#AF7AC5", "#F4D03F", "#EB984E"
+    };
+
+    const QString name = QString::fromStdString(m_current_user.name);
+    int colorIdx = name.isEmpty() ? 0 : (name[0].unicode() % 6);
+
+    m_userAvatarLabel->setText(name.isEmpty() ? "?" : QString(name[0]));
+    m_userAvatarLabel->setStyleSheet(QString(
+        "background: %1; border-radius: 17px;"
+        "color: #FFFFFF; font-size: 14px; font-weight: bold; border: none;")
+        .arg(avatarColors[colorIdx]));
+
+    m_userNameLabel->setText(name);
+
+    const std::string &level = m_current_user.level;
+    QString levelText;
+    if      (level == "PLATINUM") { levelText = "白金会员"; }
+    else if (level == "GOLD")     { levelText = "黄金会员"; }
+    else if (level == "SILVER")   { levelText = "白银会员"; }
+    else                          { levelText = "普通用户"; }
+
+    m_userLevelLabel->setText(levelText);
+    m_userLevelLabel->setStyleSheet(QString("font-size: 11px; color: #AAAAAA; border: none; background: transparent;"));
+}
+
+// 点击用户信息区域 → 弹出下拉菜单
+bool order_system::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == m_userPanel && event->type() == QEvent::MouseButtonPress) {
+        QMenu menu(this);
+        menu.setStyleSheet(R"(
+            QMenu {
+                background: #FFFFFF;
+                border: 1px solid #E8E8E8;
+                border-radius: 8px;
+                padding: 4px 0;
+            }
+            QMenu::item {
+                padding: 10px 28px;
+                font-size: 14px;
+                color: #333333;
+            }
+            QMenu::item:selected {
+                background: #FFF0EE;
+                color: #FF4D2E;
+            }
+        )");
+
+        QAction *logoutAction = menu.addAction("退出登录");
+        connect(logoutAction, &QAction::triggered, this, [this]() {
+            m_current_user = User{};
+            m_topBar->setVisible(false);
+            switchPage(0);
+        });
+
+        // 菜单显示在用户面板正下方
+        menu.exec(m_userPanel->mapToGlobal(QPoint(0, m_userPanel->height())));
+        return true;
+    }
+    return QMainWindow::eventFilter(obj, event);
 }

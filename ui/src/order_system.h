@@ -7,6 +7,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QStackedWidget>
+#include <QEvent>
 #include "ui_order_system.h"
 #include "FileManager.h"
 
@@ -17,6 +18,9 @@ class order_system : public QMainWindow
 public:
     explicit order_system(QWidget *parent = nullptr);
     ~order_system();
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     void onCategoryChanged(int row);
@@ -29,12 +33,19 @@ private:
     void setupUI();
     void refreshDishList(const QString &category = QString());
     void switchRecommendMethod(int index);
+    void updateUserInfo();
     QString m_recommendMethod;
 
     Ui_order_system *ui;
 
+    // 导航栏
+    QFrame      *m_topBar;
+    QFrame      *m_userPanel;       // 左侧用户信息区域（可点击）
+    QLabel      *m_userAvatarLabel; // 头像圆圈
+    QLabel      *m_userNameLabel;   // 用户名
+    QLabel      *m_userLevelLabel;  // 会员等级
+
     // 导航按钮
-    QFrame *m_topBar;
     QPushButton *m_btnMenu;
     QPushButton *m_btnCart;
     QPushButton *m_btnQueue;
