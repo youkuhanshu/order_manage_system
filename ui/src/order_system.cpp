@@ -701,7 +701,7 @@ void order_system::addUser(QString name, QString password) {
     u.id = id;
     u.name = name.toStdString();
     u.password = password.toStdString();
-    u.level = 0;
+    u.level = "REGULAR";
     m_users.push_back(u); // 新用户添加到用户向量
 
     FileManager f;

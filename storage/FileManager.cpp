@@ -133,7 +133,7 @@ void FileManager::LoadUsers() {
         std::stringstream ss(line);
 
         // 将用户填入vector
-        ss >> u.id >> u.name >> u.password >> u.level;
+        ss >> u.id >> u.name >> u.password >> u.level >> u.total_spent;
         all_users_cpp.push_back(u);
     }
 

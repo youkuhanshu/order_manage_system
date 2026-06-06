@@ -39,7 +39,7 @@ bool QueueService::is_Empty() const{
 
 bool QueueService::is_too_long(){
     if(is_Empty()){
-        return;
+        return false;
     }
     for(const auto& msg : waiting_){
         if(std::time(nullptr) - msg.in_time > time_threshold){

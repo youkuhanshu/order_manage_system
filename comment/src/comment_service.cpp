@@ -32,17 +32,16 @@
                 continue; // 如果由于某种原因菜品不存在，则跳过
             }
             double current_dish_rate = Dish_Comments_.at(dish_id).aver_rate;
+            bool inserted = false;
             for(auto it = rank_list.begin(); it != rank_list.end(); ++it) {
-                if (Dish_Comments_.at(*it).aver_rate > current_dish_rate) {
-                    continue; // 继续寻找更低分的位置
+                if (Dish_Comments_.at(*it).aver_rate <= current_dish_rate) {
+                    rank_list.insert(it, dish_id); // 在第一个不高于当前分的位置插入
+                    inserted = true;
+                    break;
                 }
-                // 如果遍历完都没有找到更低分的位置，说明该菜品分数最低，直接插入到末尾
-                if (it == rank_list.end()) {
-                    rank_list.push_back(dish_id);
-                }
-                rank_list.insert(it, dish_id); // 在找到的位置插入
-                
-                break;
+            }
+            if (!inserted) {
+                rank_list.push_back(dish_id); // 分数最低，插到末尾
             }
         }
     }
