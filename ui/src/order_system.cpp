@@ -1,6 +1,12 @@
 #include "order_system.h"
 
 #include <QApplication>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QListWidget>
+#include <QPushButton>
 #include <QVBoxLayout>
 #include <QMessageBox>
 
@@ -60,6 +66,122 @@ void order_system::setupUI()
         m_currentUser = User{};
         m_navBar->setVisible(false);
         switchPage(0);
+    });
+
+    auto *historyOrderBtn = new QPushButton("历史订单点菜", m_navBar);
+    historyOrderBtn->setCursor(Qt::PointingHandCursor);
+    historyOrderBtn->setStyleSheet(R"(
+        QPushButton {
+            background: #F5F5F5; color: #333333; border: 1px solid #E8E8E8;
+            border-radius: 6px; font-size: 13px; padding: 6px 14px;
+        }
+        QPushButton:hover { background: #EAF4FF; color: #0085FF; border-color: #BBDFFF; }
+        QPushButton:pressed { background: #DCEEFF; }
+    )");
+    if (auto *navLayout = qobject_cast<QHBoxLayout *>(m_navBar->layout())) {
+        navLayout->insertWidget(navLayout->count() - 1, historyOrderBtn);
+    }
+
+    connect(historyOrderBtn, &QPushButton::clicked, this, [this]() {
+        if (m_orderService == nullptr || m_currentUser.name.empty()) {
+            QMessageBox::information(this, "提示", "请先登录后再查看历史订单。");
+            return;
+        }
+
+        auto historyOrders = OrderService::loadUserHistoryOrders(
+            m_currentUser, "../storage/data/history_order.txt");
+
+        QList<QList<Dish_qt>> matchedOrders;
+        QStringList displayLines;
+        for (size_t i = 0; i < historyOrders.size(); i++) {
+            QList<Dish_qt> matchedDishes;
+            QStringList dishNames;
+            int missingCount = 0;
+
+            for (const auto &historyDish : historyOrders[i]) {
+                const QString historyName = QString::fromStdString(historyDish.name);
+                bool found = false;
+                for (const auto &item : m_allItems) {
+                    if (item.name == historyName) {
+                        matchedDishes.append(item);
+                        dishNames.append(item.name);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    missingCount++;
+                }
+            }
+
+            if (matchedDishes.isEmpty()) {
+                continue;
+            }
+
+            QString line = QString("历史订单 #%1：%2").arg(matchedOrders.size() + 1).arg(dishNames.join("、"));
+            if (missingCount > 0) {
+                line += QString("（%1 道菜当前菜单中不存在）").arg(missingCount);
+            }
+            matchedOrders.append(matchedDishes);
+            displayLines.append(line);
+        }
+
+        if (matchedOrders.isEmpty()) {
+            QMessageBox::information(this, "提示", "当前用户暂无可用的历史订单。");
+            return;
+        }
+
+        QDialog dialog(this);
+        dialog.setWindowTitle("历史订单点菜");
+        dialog.resize(560, 360);
+
+        auto *dialogLayout = new QVBoxLayout(&dialog);
+        dialogLayout->setContentsMargins(16, 16, 16, 16);
+        dialogLayout->setSpacing(10);
+
+        auto *tipLabel = new QLabel("选择一条历史订单，确认后会直接加入购物车。", &dialog);
+        tipLabel->setStyleSheet("font-size: 13px; color: #666666;");
+        dialogLayout->addWidget(tipLabel);
+
+        auto *orderList = new QListWidget(&dialog);
+        orderList->setStyleSheet(R"(
+            QListWidget {
+                background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 6px;
+                font-size: 13px; color: #333333;
+            }
+            QListWidget::item { padding: 10px; border-bottom: 1px solid #F5F5F5; }
+            QListWidget::item:selected { background: #EAF4FF; color: #0085FF; }
+        )");
+        for (int i = 0; i < displayLines.size(); i++) {
+            auto *item = new QListWidgetItem(displayLines[i], orderList);
+            item->setData(Qt::UserRole, i);
+        }
+        orderList->setCurrentRow(0);
+        dialogLayout->addWidget(orderList, 1);
+
+        auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        buttonBox->button(QDialogButtonBox::Ok)->setText("加入购物车");
+        buttonBox->button(QDialogButtonBox::Cancel)->setText("取消");
+        connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        connect(orderList, &QListWidget::itemDoubleClicked, &dialog, &QDialog::accept);
+        dialogLayout->addWidget(buttonBox);
+
+        if (dialog.exec() != QDialog::Accepted || orderList->currentItem() == nullptr) {
+            return;
+        }
+
+        const int selectedIndex = orderList->currentItem()->data(Qt::UserRole).toInt();
+        const QList<Dish_qt> selectedOrder = matchedOrders[selectedIndex];
+        for (const auto &item : selectedOrder) {
+            Dish d = m_fl.dish_to_cpp(item);
+            m_orderService->addDish(d);
+        }
+
+        QList<Dish_qt> qtOrder = buildQtOrder();
+        m_navBar->setDishCount(qtOrder.size());
+        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+        switchPage(3);
     });
 
     mainLayout->addWidget(m_navBar);
