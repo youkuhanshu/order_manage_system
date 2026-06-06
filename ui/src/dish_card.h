@@ -22,16 +22,16 @@ signals: // 声明一个自定义信号
 private:
     void setupUI(const Dish_qt &dish);
 
-    Dish_qt      m_dish;
-    double       m_discountRate;
+    Dish_qt m_dish;
+    double m_discountRate;
 
-    QFrame      *m_imageFrame;        // 左侧图片占位
-    QLabel      *m_imageText;         // 图片占位文字
-    QLabel      *m_nameLabel;         // 菜名
-    QLabel      *m_descLabel;         // 说明
-    QLabel      *m_ratingLabel;       // ★ 评分
-    QLabel      *m_salesLabel;        // 月售
-    QLabel      *m_priceLabel;        // ¥原价
-    QLabel      *m_memberPriceLabel;  // 会员价（nullptr 表示非会员）
-    QPushButton *m_addBtn;            // 添加按钮
+    QFrame *m_imageFrame; // 左侧图片占位
+    QLabel *m_imageText; // 图片占位文字
+    QLabel *m_nameLabel; // 菜名
+    QLabel *m_descLabel; // 说明
+    QLabel *m_ratingLabel; // 评分
+    QLabel *m_salesLabel; // 月售
+    QLabel *m_priceLabel; // ¥原价
+    QLabel *m_memberPriceLabel; // 会员价（nullptr 表示非会员）
+    QPushButton *m_addBtn; // 添加按钮
 };

@@ -43,14 +43,7 @@ void FileManager::LoadMenu() {
         all_dishes_cpp.push_back(d);
 
         // 将菜品填入QList
-        d_qt.id = d.id;
-        d_qt.name = QString::fromStdString(d.name);
-        d_qt.price = d.price;
-        d_qt.description = QString::fromStdString(d.description);
-        d_qt.sales = d.sales;
-        d_qt.rating = d.rating;
-        d_qt.category = QString::fromStdString(d.category);
-        d_qt.comment_count = d.comment_count;
+        d_qt = dish_to_qt(d);
         all_dishes_qt.append(d_qt);
 
         // 获取菜品种类，用于分类栏
@@ -215,14 +208,14 @@ std::vector<CommentMsg> FileManager::getComments() {
 // 追加一条评论并同步更新 menu.txt 中涉及菜品的评分和评论数
 void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment)
 {
-    // ---- 1. 追加评论到 comment.txt ----
+    // 追加评论到 comment.txt
     {
         std::ofstream out(COMMENT_FILE_PATH, std::ios::app);
         if (out) out << comment.to_String() << "\n";
     }
     all_comments_.push_back(comment);
 
-    // ---- 2. 读取 menu.txt 所有行 ----
+    // 读取 menu.txt 所有行
     std::vector<std::string> lines;
     {
         std::ifstream in(MENU_FILE_PATH);
@@ -231,7 +224,7 @@ void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment)
         while (std::getline(in, line)) lines.push_back(line);
     }
 
-    // ---- 3. 对评论中每个菜品，更新对应行的评分和评论数 ----
+    // 对评论中每个菜品，更新对应行的评分和评论数
     for (const auto& dishIdStr : comment.dish_ids) {
         if (dishIdStr.empty()) continue;
         int targetId = std::stoi(dishIdStr);
@@ -247,10 +240,10 @@ void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment)
             if (tokens.size() < 8) continue;
             if (std::stoi(tokens[0]) != targetId) continue;
 
-            double  oldRating = std::stod(tokens[5]);
-            int     oldCount  = std::stoi(tokens[7]);
-            double  newRating = (oldRating * oldCount + comment.rate) / (oldCount + 1);
-            int     newCount  = oldCount + 1;
+            double oldRating = std::stod(tokens[5]);
+            int oldCount = std::stoi(tokens[7]);
+            double newRating = (oldRating * oldCount + comment.rate) / (oldCount + 1);
+            int newCount = oldCount + 1;
 
             // 保留一位小数
             std::ostringstream ratingStr;
@@ -276,8 +269,109 @@ void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment)
         }
     }
 
-    // ---- 4. 将更新后的内容写回 menu.txt ----
+    // 将更新后的内容写回 menu.txt
     std::ofstream out(MENU_FILE_PATH);
     if (!out) return;
     for (const auto& l : lines) out << l << "\n";
+}
+
+// 类型转换
+Dish_qt FileManager::dish_to_qt(Dish& dish_cpp) {
+    Dish_qt d;
+    d.id = dish_cpp.id;
+    d.name = QString::fromStdString(dish_cpp.name);
+    d.price = dish_cpp.price;
+    d.description = QString::fromStdString(dish_cpp.description);
+    d.sales = dish_cpp.sales;
+    d.rating = dish_cpp.rating;
+    d.category = QString::fromStdString(dish_cpp.category);
+    d.comment_count = dish_cpp.comment_count;
+    return d;
+}
+
+Dish FileManager::dish_to_cpp(const Dish_qt& dish_qt) {
+    Dish d;
+    d.id = dish_qt.id;
+    d.name = dish_qt.name.toStdString();
+    d.price = dish_qt.price;
+    d.description = dish_qt.description.toStdString();
+    d.sales = dish_qt.sales;
+    d.rating = dish_qt.rating;
+    d.category = dish_qt.category.toStdString();
+    d.comment_count = dish_qt.comment_count;
+    return d;
+}
+
+User_qt FileManager::user_to_qt(const User& user_cpp) {
+    User_qt u;
+    u.id = user_cpp.id;
+    u.name = QString::fromStdString(user_cpp.name);
+    u.password = QString::fromStdString(user_cpp.password);
+    u.level = QString::fromStdString(user_cpp.level);
+    u.total_spent = user_cpp.total_spent;
+    return u;
+}
+
+User FileManager::user_to_cpp(const User_qt& user_qt) {
+    User u;
+    u.id = user_qt.id;
+    u.name = user_qt.name.toStdString();
+    u.password = user_qt.password.toStdString();
+    u.level = user_qt.level.toStdString();
+    u.total_spent = user_qt.total_spent;
+    return u;
+}
+
+QueueMsg FileManager::queuemsg_to_cpp(const QueueMsg_qt& q) {
+    QueueMsg m;
+    m.queue_id = q.queue_id;
+    m.order_id = q.order_id;
+    m.in_time = static_cast<std::time_t>(q.in_time.toSecsSinceEpoch());
+    return m;
+}
+
+QueueMsg_qt FileManager::queuemsg_to_qt(const QueueMsg& msg) {
+    QueueMsg_qt q;
+    q.queue_id = msg.queue_id;
+    q.order_id = msg.order_id;
+    q.in_time = QDateTime::fromSecsSinceEpoch(static_cast<qint64>(msg.in_time));
+    return q;
+}
+
+CommentMsg FileManager::commentmsg_to_cpp(const CommentMsg_qt& q) {
+    CommentMsg m;
+    m.user_id = q.user_id.toStdString();
+    for (const auto &s : q.dish_ids) m.dish_ids.push_back(s.toStdString());
+    m.comment = q.comment.toStdString();
+    m.rate = q.rate;
+    m.in_time = static_cast<std::time_t>(q.in_time.toSecsSinceEpoch());
+    return m;
+}
+
+CommentMsg_qt FileManager::commentmsg_to_qt(const CommentMsg& msg) {
+    CommentMsg_qt q;
+    q.user_id = QString::fromStdString(msg.user_id);
+    for (const auto &s : msg.dish_ids) q.dish_ids.append(QString::fromStdString(s));
+    q.comment = QString::fromStdString(msg.comment);
+    q.rate = msg.rate;
+    q.in_time = QDateTime::fromSecsSinceEpoch(static_cast<qint64>(msg.in_time));
+    return q;
+}
+
+DishComment_msg FileManager::dishcomment_to_cpp(const DishComment_msg_qt& q) {
+    DishComment_msg d;
+    d.aver_rate = q.aver_rate;
+    d.dish_comment_num = q.dish_comment_num;
+    for (const auto &c : q.comments) d.comments.push_back(commentmsg_to_cpp(c));
+    for (int r : q.rate_rank) d.rate_rank.push_back(r);
+    return d;
+}
+
+DishComment_msg_qt FileManager::dishcomment_to_qt(const DishComment_msg& msg) {
+    DishComment_msg_qt q;
+    q.aver_rate = msg.aver_rate;
+    q.dish_comment_num = msg.dish_comment_num;
+    for (const auto &c : msg.comments) q.comments.append(commentmsg_to_qt(c));
+    for (int r : msg.rate_rank) q.rate_rank.append(r);
+    return q;
 }
