@@ -16,8 +16,8 @@ static const char *categoryColor(const QString &category)
 // ================================================================
 //  DishCard
 // ================================================================
-DishCard::DishCard(const Dish_qt &dish, QWidget *parent)
-    : QFrame(parent), m_dish(dish)
+DishCard::DishCard(const Dish_qt &dish, double discountRate, QWidget *parent)
+    : QFrame(parent), m_dish(dish), m_discountRate(discountRate), m_memberPriceLabel(nullptr)
 {
     setupUI(dish);
 }
@@ -37,7 +37,7 @@ void DishCard::setupUI(const Dish_qt &dish)
             background: #fafdff;
         }
     )");
-    setFixedHeight(120);
+    setFixedHeight(m_discountRate < 1.0 ? 130 : 120);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     auto *mainLayout = new QHBoxLayout(this);
@@ -120,15 +120,37 @@ void DishCard::setupUI(const Dish_qt &dish)
     // ---- 右侧：价格 & 加购按钮 ----
     auto *rightLayout = new QVBoxLayout();
     rightLayout->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    rightLayout->setSpacing(10);
+    rightLayout->setSpacing(4);
 
-    m_priceLabel = new QLabel(QString("¥%1").arg(dish.price, 0, 'f', 0), this);
-    m_priceLabel->setStyleSheet(
-        "font-size: 18px; font-weight: normal; color: #FF4D2E;"
-        "border: none; background: transparent;");
-    m_priceLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    rightLayout->addWidget(m_priceLabel);
+    if (m_discountRate < 1.0) {
+        // 原价：灰色 + 删除线
+        m_priceLabel = new QLabel(QString("¥%1").arg(dish.price, 0, 'f', 0), this);
+        m_priceLabel->setStyleSheet(
+            "font-size: 14px; color: #AAAAAA; text-decoration: line-through;"
+            "border: none; background: transparent;");
+        m_priceLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        rightLayout->addWidget(m_priceLabel);
 
+        // 会员价：金橙色
+        double memberPrice = dish.price * m_discountRate;
+        m_memberPriceLabel = new QLabel(
+            QString("会员价：¥%1").arg(memberPrice, 0, 'f', 0), this);
+        m_memberPriceLabel->setStyleSheet(
+            "font-size: 17px; font-weight: bold; color: #E8960A;"
+            "border: none; background: transparent;");
+        m_memberPriceLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        rightLayout->addWidget(m_memberPriceLabel);
+    } else {
+        // 普通价格
+        m_priceLabel = new QLabel(QString("¥%1").arg(dish.price, 0, 'f', 0), this);
+        m_priceLabel->setStyleSheet(
+            "font-size: 18px; font-weight: normal; color: #FF4D2E;"
+            "border: none; background: transparent;");
+        m_priceLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        rightLayout->addWidget(m_priceLabel);
+    }
+
+    rightLayout->addSpacing(6);
     m_addBtn = new QPushButton("+", this);
     m_addBtn->setFixedSize(30, 30);
     m_addBtn->setCursor(Qt::PointingHandCursor);

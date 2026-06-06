@@ -74,7 +74,6 @@ public:
     static std::vector<Dish> getMenu_cpp();
     static QList<Dish_qt> getMenu_qt();
     static QStringList getCategories_qt();
-    static QList<Dish_qt> getRecommend_qt();
     static QList<Dish_qt> getRecommendBySales();
     static QList<Dish_qt> getRecommendByRating();
     static QList<Dish_qt> getRecommendByComments();
