@@ -56,19 +56,19 @@ void FileManager::LoadMenu() {
 
     auto copy = all_dishes_qt; // 防止原来的向量被修改
 
-    // 按销量降序
+    // 按销量
     std::sort(copy.begin(), copy.end(), [](const Dish_qt &a, const Dish_qt &b) { return a.sales > b.sales; });
     for (int i = 0; i < qMin(5, copy.size()); i++) {
         recommend_by_sales.append(copy[i]);
     }
 
-    // 按评分降序
+    // 按评分
     std::sort(copy.begin(), copy.end(), [](const Dish_qt &a, const Dish_qt &b) { return a.rating > b.rating; });
     for (int i = 0; i < qMin(5, copy.size()); i++) {
         recommend_by_rating.append(copy[i]);
     }
 
-    // 按评论数降序
+    // 按评论数
     std::sort(copy.begin(), copy.end(), [](const Dish_qt &a, const Dish_qt &b) { return a.comment_count > b.comment_count; });
     for (int i = 0; i < qMin(5, copy.size()); i++) {
         recommend_by_comments.append(copy[i]);
@@ -152,24 +152,44 @@ void FileManager::addUser(int id, std::string name, std::string password) {
 // 加载排队队列
 void FileManager::LoadQueue() {
     all_queue_.clear();
-    std::ifstream in(QUEUE_FILE_PATH);
-    if (!in) return;
+
+    std::ifstream ifs;
     std::string line;
-    while (std::getline(in, line)) {
-        if (line.empty()) continue;
+    
+    ifs.open(QUEUE_FILE_PATH, std::ios::in);
+
+    if (!ifs.is_open()) {
+        std::cout << "无法打开排队文件" << std::endl;
+        return;
+    }
+    
+    while (std::getline(ifs, line)) {
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
         all_queue_.push_back(QueueMsg::from_String(line));
     }
-    in.close();
+
+    ifs.close();
 }
 
 // 在C++中使用，更新排队txt
 void FileManager::SaveQueue(const std::vector<QueueMsg>& queue) const {
-    std::ofstream out(QUEUE_FILE_PATH);
-    if (!out) return;
-    for (const auto& msg : queue) {
-        out << msg.to_String() << "\n";
+
+    std::ofstream ofs;
+
+    ofs.open(QUEUE_FILE_PATH, std::ios::out);
+    
+    if (!ofs.is_open()) {
+        std::cout << "无法打开排队文件" << std::endl;
+        return;
     }
-    out.close();
+    
+    for (const auto& msg : queue) {
+        ofs << msg.to_String() << "\n";
+    }
+
+    ofs.close();
 }
 
 // 在C++中使用，获取全部队列
@@ -180,24 +200,41 @@ std::vector<QueueMsg> FileManager::getQueue() {
 // 加载所有评论
 void FileManager::LoadComments() {
     all_comments_.clear();
-    std::ifstream in(COMMENT_FILE_PATH);
-    if (!in) return;
+
+    std::ifstream ifs;
     std::string line;
-    while (std::getline(in, line)) {
+
+    ifs.open(COMMENT_FILE_PATH, std::ios::in);
+    if (!ifs.is_open()) {
+        std::cout << "无法打开评论文件" << std::endl;
+        return;
+    }
+    
+    while (std::getline(ifs, line)) {
         if (line.empty() || line[0] == '#') continue;
         all_comments_.push_back(CommentMsg::from_String(line));
     }
-    in.close();
+
+    ifs.close();
 }
 
 // 在C++中使用，将评论写入txt
 void FileManager::SaveComments(const std::vector<CommentMsg>& comments) const {
-    std::ofstream out(COMMENT_FILE_PATH);
-    if (!out) return;
-    for (const auto& msg : comments) {
-        out << msg.to_String() << "\n";
+
+    std::ofstream ofs;
+    
+    ofs.open(COMMENT_FILE_PATH, std::ios::out);
+
+    if (!ofs.is_open()) {
+        std::cout << "无法打开评论文件" << std::endl;
+        return;
     }
-    out.close();
+
+    for (const auto& msg : comments) {
+        ofs << msg.to_String() << "\n";
+    }
+
+    ofs.close();
 }
 
 // 在C++中使用，获取所有评论
@@ -209,70 +246,98 @@ std::vector<CommentMsg> FileManager::getComments() {
 void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment)
 {
     // 追加评论到 comment.txt
-    {
-        std::ofstream out(COMMENT_FILE_PATH, std::ios::app);
-        if (out) out << comment.to_String() << "\n";
+    std::ofstream ofs;
+    ofs.open(COMMENT_FILE_PATH, std::ios::app);
+    if (!ofs.is_open()) {
+        std::cout << "无法打开评论文件" << std::endl;
+        return;
     }
+    ofs << comment.to_String() << "\n";
+    ofs.close();
     all_comments_.push_back(comment);
 
-    // 读取 menu.txt 所有行
-    std::vector<std::string> lines;
-    {
-        std::ifstream in(MENU_FILE_PATH);
-        if (!in) return;
-        std::string line;
-        while (std::getline(in, line)) lines.push_back(line);
+    // 读取 menu.txt 全部行
+    std::ifstream ifs;
+    ifs.open(MENU_FILE_PATH, std::ios::in);
+    if (!ifs.is_open()) {
+        std::cout << "无法打开菜单文件" << std::endl;
+        return;
     }
+    std::vector<std::string> lines;
+    std::string line;
+    while (getline(ifs, line)) {
+        lines.push_back(line);
+    }
+    ifs.close();
 
-    // 对评论中每个菜品，更新对应行的评分和评论数
-    for (const auto& dishIdStr : comment.dish_ids) {
-        if (dishIdStr.empty()) continue;
-        int targetId = std::stoi(dishIdStr);
+    // 对评论涉及的每个菜品，更新对应行的评分和评论数
+    for (size_t d = 0; d < comment.dish_ids.size(); d++) {
+        if (comment.dish_ids[d].empty()) {
+            continue;
+        }
 
-        for (auto& l : lines) {
-            if (l.empty() || l[0] == '#') continue;
+        int targetId = std::stoi(comment.dish_ids[d]);
 
-            // 按空格分词，格式：id name price desc sales rating category comment_count
-            std::vector<std::string> tokens;
-            std::istringstream iss(l);
-            std::string tok;
-            while (iss >> tok) tokens.push_back(tok);
-            if (tokens.size() < 8) continue;
-            if (std::stoi(tokens[0]) != targetId) continue;
+        for (size_t i = 0; i < lines.size(); i++) {
+            if (lines[i].empty() || lines[i][0] == '#') continue;
 
-            double oldRating = std::stod(tokens[5]);
-            int oldCount = std::stoi(tokens[7]);
-            double newRating = (oldRating * oldCount + comment.rate) / (oldCount + 1);
-            int newCount = oldCount + 1;
+            // 格式：id name price desc sales rating category comment_count
+            int id, sales, commentCount;
+            double price, rating;
 
-            // 保留一位小数
-            std::ostringstream ratingStr;
-            ratingStr << std::fixed;
-            ratingStr.precision(1);
-            ratingStr << newRating;
+            std::string name, description, category;
+            std::stringstream ss(lines[i]);
 
-            tokens[5] = ratingStr.str();
-            tokens[7] = std::to_string(newCount);
+            ss >> id >> name >> price >> description >> sales >> rating >> category >> commentCount;
 
-            // 重组行
-            l = tokens[0];
-            for (size_t i = 1; i < tokens.size(); i++) l += " " + tokens[i];
-
-            // 同步内存中的 Qt 数据
-            for (auto& dq : all_dishes_qt) {
-                if (dq.id == targetId) { dq.rating = newRating; break; }
+            if (id != targetId) {
+                continue;
             }
-            for (auto& dc : all_dishes_cpp) {
-                if (dc.id == targetId) { dc.rating = newRating; break; }
+
+            // 更新评分和评论数
+            double newRating = (rating * commentCount + comment.rate) / (commentCount + 1);
+            commentCount++;
+
+            // 重组行（评分保留一位小数）
+            std::stringstream newLine;
+            newLine << id << " " << name << " " << price << " " << description << " " << sales << " " << std::fixed;
+            newLine.precision(1);
+            newLine << newRating << " " << category << " " << commentCount;
+            lines[i] = newLine.str();
+
+            // 同步内存中的数据
+            for (size_t j = 0; j < all_dishes_qt.size(); j++) {
+                if (all_dishes_qt[j].id == targetId) { 
+                    all_dishes_qt[j].rating = newRating; 
+                    break; 
+                }
             }
+
+            for (size_t j = 0; j < all_dishes_cpp.size(); j++) {
+                if (all_dishes_cpp[j].id == targetId) { 
+                    all_dishes_cpp[j].rating = newRating; 
+                    break; 
+                }
+            }
+
             break;
         }
     }
 
-    // 将更新后的内容写回 menu.txt
-    std::ofstream out(MENU_FILE_PATH);
-    if (!out) return;
-    for (const auto& l : lines) out << l << "\n";
+    // 写回 menu.txt
+    std::ofstream out;
+    out.open(MENU_FILE_PATH, std::ios::out);
+
+    if (!out.is_open()) {
+        std::cout << "无法写入菜单文件" << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < lines.size(); i++) {
+        out << lines[i] << "\n";
+    }
+    
+    out.close();
 }
 
 // 类型转换

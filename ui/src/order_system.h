@@ -52,4 +52,12 @@ private:
     QStringList m_categories;
     std::vector<User> m_users;
     User m_currentUser;
+
+    // 菜单
+    OrderService *m_orderService = nullptr;
+
+    FileManager m_fl;
+
+    /// 把 m_orderService->getOrder() 转成 QList<Dish_qt> 供 CartPage 使用
+    QList<Dish_qt> buildQtOrder();
 };

@@ -41,6 +41,7 @@ void OrderService::addDish(const Dish& dish) {
     //这里尚不知道怎么在ui界面中调用这个函数来加菜，（应当要多次例如在ui中点击加菜按钮时调用填充进order_里）
 }
 
+// std::remove 要比较两个 Dish 是否相等，但是Dish本身并没有==运算符
 void OrderService::removeDish(const Dish& dish) {
     order_.erase(std::remove(order_.begin(), order_.end(), dish), order_.end());
 }
@@ -198,4 +199,13 @@ double OrderService::checkout() {
     total_price_ = calcCart() * getDiscountRate(user_);
     updateUser(user_, order_, total_price_);
     return total_price_;
+}
+
+void OrderService::removeOneDish(int dishId) {
+    for (auto it = order_.begin(); it != order_.end(); it++) {
+        if (it->id == dishId) {
+            order_.erase(it);
+            break;
+        }
+    }
 }

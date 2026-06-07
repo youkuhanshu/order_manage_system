@@ -17,6 +17,11 @@ public:
     virtual void updateUser(const User& user_, const std::vector<Dish>& order_, double total_price_);
     static std::vector<std::vector<Dish>> loadUserHistoryOrders(const User& user_, const std::string& history_path);
 
+    // 购物车辅助
+    const std::vector<Dish>& getOrder() const { return order_; }
+    void clearOrder() { order_.clear(); total_price_ = 0.0; }
+    void removeOneDish(int dishId);   // 从 order_ 中移除第一个匹配的菜品
+
 private:
     User user_;
     std::vector<Dish> order_;

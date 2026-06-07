@@ -18,6 +18,8 @@ file(GLOB srcs CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 # 添加 storage 目录下的源文件（不在 src 目录内，需显式加入）
 list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/../storage/FileManager.cpp)
+# 添加orderservice目录下的源文件
+list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/../order/src/Order_mgr.cpp)
 
 # Specify MSVC UTF-8 encoding   
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
