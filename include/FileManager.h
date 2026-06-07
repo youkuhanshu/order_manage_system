@@ -34,6 +34,11 @@ struct Dish
     double rating;
     std::string category;
     int comment_count;
+
+    // 为std::remove提供Dish的==运算符
+    bool operator==(const Dish& other) const {
+        return id == other.id;
+    }
 };
 
 // Qt 版，供 UI 使用

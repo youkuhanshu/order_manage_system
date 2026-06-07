@@ -19,18 +19,17 @@ order_system::~order_system()
 //  数据加载
 void order_system::loadData()
 {
-    FileManager fm;
-    fm.LoadMenu();
-    fm.LoadUsers();
-    fm.LoadComments();
+    m_fl.LoadMenu();
+    m_fl.LoadUsers();
+    m_fl.LoadComments();
 
-    m_allComments = fm.getComments();
-    m_allItems = fm.getMenu_qt();
-    m_categories = fm.getCategories_qt();
-    m_bySales = fm.getRecommendBySales();
-    m_byRating = fm.getRecommendByRating();
-    m_byComments = fm.getRecommendByComments();
-    m_users = fm.getUsers_cpp();
+    m_allComments = m_fl.getComments();
+    m_allItems = m_fl.getMenu_qt();
+    m_categories = m_fl.getCategories_qt();
+    m_bySales = m_fl.getRecommendBySales();
+    m_byRating = m_fl.getRecommendByRating();
+    m_byComments = m_fl.getRecommendByComments();
+    m_users = m_fl.getUsers_cpp();
 
     if (m_allItems.isEmpty())
         QMessageBox::warning(this, "加载失败", "未能加载菜单数据！");
@@ -77,11 +76,14 @@ void order_system::setupUI()
             m_menuPage->setData(m_allItems, m_bySales, m_byRating, m_byComments, m_categories);
             m_menuPage->setDiscountRate(discountRateForUser(m_currentUser));
             switchPage(2);
+
+            m_orderService = new OrderService(m_currentUser);
         } 
         else {
             QMessageBox::warning(this, "登录失败", "用户名或密码不正确！");
         }
     });
+
     connect(m_loginPage, &LoginPage::toRegisterClicked, this, [this]() { switchPage(1); });
 
     // 注册页
@@ -94,6 +96,7 @@ void order_system::setupUI()
         m_menuPage->setDiscountRate(1.0); // 新用户是 REGULAR
         switchPage(2);
     });
+
     connect(m_registerPage, &RegisterPage::toLoginClicked, this, [this]() { switchPage(0); });
 
     // 菜单页
@@ -101,7 +104,8 @@ void order_system::setupUI()
     connect(m_menuPage, &MenuPage::addDishClicked, this, [this](int dishId) {
         for (const auto &item : m_allItems) {
             if (item.id == dishId) {
-                // 待接入
+                Dish d = m_fl.dish_to_cpp(item);
+                m_orderService->addDish(d);
                 return;
             }
         }
@@ -111,6 +115,64 @@ void order_system::setupUI()
     // 购物车页 & 排队页
     m_cartPage  = new CartPage();
     m_queuePage = new QueuePage();
+
+    // ---- 购物车信号连接 ----
+    connect(m_cartPage, &CartPage::backToMenuRequested, this, [this]() {
+        switchPage(2);
+    });
+
+    connect(m_cartPage, &CartPage::clearCartRequested, this, [this]() {
+        m_orderService->clearOrder();
+        m_navBar->setDishCount(0);
+        m_cartPage->setCart({}, discountRateForUser(m_currentUser));
+    });
+
+    connect(m_cartPage, &CartPage::increaseRequested, this, [this](int dishId) {
+        for (const auto &item : m_allItems) {
+            if (item.id == dishId) {
+                Dish d = m_fl.dish_to_cpp(item);
+                m_orderService->addDish(d);
+                break;
+            }
+        }
+        QList<Dish_qt> qtOrder = buildQtOrder();
+        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+        m_navBar->setDishCount(qtOrder.size());
+    });
+
+    connect(m_cartPage, &CartPage::decreaseRequested, this, [this](int dishId) {
+        m_orderService->removeOneDish(dishId);
+        QList<Dish_qt> qtOrder = buildQtOrder();
+        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+        m_navBar->setDishCount(qtOrder.size());
+    });
+
+    connect(m_cartPage, &CartPage::checkoutRequested, this, [this]() {
+        if (m_orderService->getOrder().empty()) {
+            QMessageBox::information(this, "提示", "购物车是空的，请先选择菜品。");
+            return;
+        }
+        double total = m_orderService->checkout();
+
+        // 从文件重新加载用户数据，同步最新的等级和消费
+        m_fl.LoadUsers();
+        m_users = m_fl.getUsers_cpp();
+        for (const auto &u : m_users) {
+            if (u.name == m_currentUser.name) {
+                m_currentUser = u;
+                break;
+            }
+        }
+
+        m_orderService->clearOrder();
+        m_navBar->setUser(m_currentUser);
+        m_navBar->setDishCount(0);
+        m_menuPage->setDiscountRate(discountRateForUser(m_currentUser));
+
+        QMessageBox::information(this, "结算成功",
+            QString("本次实付 ¥%1\n感谢您的惠顾！").arg(total, 0, 'f', 2));
+        switchPage(2);
+    });
 
     m_stackedWidget->addWidget(m_loginPage);    // index 0 : 登录页
     m_stackedWidget->addWidget(m_registerPage); // index 1 : 注册页
@@ -130,8 +192,25 @@ void order_system::setupUI()
 //  页面切换
 void order_system::switchPage(int index)
 {
+    // 切换到购物车页前先刷新显示
+    if (index == 3 && m_orderService != nullptr) {
+        QList<Dish_qt> qtOrder = buildQtOrder();
+        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+    }
     m_stackedWidget->setCurrentIndex(index);
     m_navBar->setActiveNav(index);
+}
+
+//  把后端 order_ 转成 QList<Dish_qt>
+QList<Dish_qt> order_system::buildQtOrder()
+{
+    QList<Dish_qt> result;
+    const std::vector<Dish> &order = m_orderService->getOrder();
+    for (size_t i = 0; i < order.size(); i++) {
+        Dish d = order[i];
+        result.append(m_fl.dish_to_qt(d));
+    }
+    return result;
 }
 
 //  业务逻辑
@@ -160,8 +239,7 @@ void order_system::doRegister(const QString &name, const QString &password)
     m_users.push_back(u);
     m_currentUser = u;
 
-    FileManager f;
-    f.addUser(u.id, u.name, u.password);
+    m_fl.addUser(u.id, u.name, u.password);
 }
 
 double order_system::discountRateForUser(const User &u) const
