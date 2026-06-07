@@ -83,6 +83,20 @@ void CartPage::setupUI()
     connect(goMenuBtn, &QPushButton::clicked, this, &CartPage::backToMenuRequested);
     emptyLayout->addWidget(goMenuBtn, 0, Qt::AlignCenter);
 
+    auto *historyOrderBtn = new QPushButton("历史订单点菜", m_emptyWidget);
+    historyOrderBtn->setFixedSize(150, 38);
+    historyOrderBtn->setCursor(Qt::PointingHandCursor);
+    historyOrderBtn->setStyleSheet(R"(
+        QPushButton {
+            background: #FFFFFF; color: #0085FF; border: 1px solid #BBDFFF;
+            border-radius: 19px; font-size: 14px;
+        }
+        QPushButton:hover   { background: #EAF4FF; }
+        QPushButton:pressed { background: #DCEEFF; }
+    )");
+    connect(historyOrderBtn, &QPushButton::clicked, this, &CartPage::historyOrderRequested);
+    emptyLayout->addWidget(historyOrderBtn, 0, Qt::AlignCenter);
+
     mainLayout->addWidget(m_emptyWidget, 1);
 
     // ---- 有内容状态 ----
