@@ -29,6 +29,8 @@ signals:
     void checkoutRequested();             ///< 去结算
     void backToMenuRequested();           ///< 继续点餐
 
+    void historyOrderRequested();
+
 private:
     void setupUI();
     void refreshDisplay();

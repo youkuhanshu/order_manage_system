@@ -69,20 +69,8 @@ void order_system::setupUI()
     });
 
     auto *historyOrderBtn = new QPushButton("历史订单点菜", m_navBar);
-    historyOrderBtn->setCursor(Qt::PointingHandCursor);
-    historyOrderBtn->setStyleSheet(R"(
-        QPushButton {
-            background: #F5F5F5; color: #333333; border: 1px solid #E8E8E8;
-            border-radius: 6px; font-size: 13px; padding: 6px 14px;
-        }
-        QPushButton:hover { background: #EAF4FF; color: #0085FF; border-color: #BBDFFF; }
-        QPushButton:pressed { background: #DCEEFF; }
-    )");
-    if (auto *navLayout = qobject_cast<QHBoxLayout *>(m_navBar->layout())) {
-        navLayout->insertWidget(navLayout->count() - 1, historyOrderBtn);
-    }
-
-    connect(historyOrderBtn, &QPushButton::clicked, this, [this]() {
+    historyOrderBtn->setVisible(false);
+    auto showHistoryOrderDialog = [this]() {
         if (m_orderService == nullptr || m_currentUser.name.empty()) {
             QMessageBox::information(this, "提示", "请先登录后再查看历史订单。");
             return;
@@ -180,9 +168,9 @@ void order_system::setupUI()
 
         QList<Dish_qt> qtOrder = buildQtOrder();
         m_navBar->setDishCount(qtOrder.size());
-        m_cartPage->setCart(qtOrder, discountRateForUser(m_currentUser));
+        m_cartPage->setCart(qtOrder, m_orderService->getDiscountRate(m_currentUser));
         switchPage(3);
-    });
+    };
 
     mainLayout->addWidget(m_navBar);
 
@@ -237,6 +225,7 @@ void order_system::setupUI()
     // 购物车页 & 排队页
     m_cartPage  = new CartPage();
     m_queuePage = new QueuePage();
+    connect(m_cartPage, &CartPage::historyOrderRequested, this, showHistoryOrderDialog);
 
     // ---- 购物车信号连接 ----
     connect(m_cartPage, &CartPage::backToMenuRequested, this, [this]() {
