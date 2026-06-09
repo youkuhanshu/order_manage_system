@@ -135,7 +135,7 @@ void order_system::setupUI()
         orderList->setStyleSheet(R"(
             QListWidget {
                 background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 6px;
-                font-size: 13px; color: #333333;
+                font-size: 13px; color: #333333; outline: none;
             }
             QListWidget::item { padding: 10px; border-bottom: 1px solid #F5F5F5; }
             QListWidget::item:selected { background: #EAF4FF; color: #0085FF; }

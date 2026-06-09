@@ -11,7 +11,10 @@ class DishCard : public QFrame
     Q_OBJECT // 这个宏是固定写法，必须有一个
 
 public:
-    explicit DishCard(const Dish_qt &dish, double discountRate = 1.0, QWidget *parent = nullptr);
+    /// salesRank / ratingRank：在 Top5 中的名次（1~5），0 表示不在榜
+    explicit DishCard(const Dish_qt &dish, double discountRate = 1.0,
+                      int salesRank = 0, int ratingRank = 0,
+                      QWidget *parent = nullptr);
 
     int dishId() const { return m_dish.id; }
 
@@ -23,7 +26,9 @@ private:
     void setupUI(const Dish_qt &dish);
 
     Dish_qt m_dish;
-    double m_discountRate;
+    double  m_discountRate;
+    int     m_salesRank;
+    int     m_ratingRank;
 
     QFrame *m_imageFrame; // 左侧图片占位
     QLabel *m_imageText; // 图片占位文字
