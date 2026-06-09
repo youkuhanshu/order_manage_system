@@ -193,7 +193,15 @@ void MenuPage::refreshDishList(const QString &category)
     int count = 0;
 
     auto makeCard = [&](const Dish_qt &dish) {
-        auto *card = new DishCard(dish, m_discountRate, m_dishContainer);
+        // 查找该菜品在销量 Top5 / 好评 Top5 中的名次（找不到则为 0）
+        int salesRank = 0, ratingRank = 0;
+        for (int i = 0; i < m_bySales.size(); i++) {
+            if (m_bySales[i].id == dish.id) { salesRank = i + 1; break; }
+        }
+        for (int i = 0; i < m_byRating.size(); i++) {
+            if (m_byRating[i].id == dish.id) { ratingRank = i + 1; break; }
+        }
+        auto *card = new DishCard(dish, m_discountRate, salesRank, ratingRank, m_dishContainer);
         connect(card, &DishCard::addClicked,     this, [this](int id) { emit addDishClicked(id); });
         connect(card, &DishCard::commentClicked, this, [this](int dishId) {
             for (const auto &d : m_allItems) {

@@ -14,8 +14,12 @@ static const char *categoryColor(const QString &category)
 }
 
 //  DishCard
-DishCard::DishCard(const Dish_qt &dish, double discountRate, QWidget *parent)
-    : QFrame(parent), m_dish(dish), m_discountRate(discountRate), m_memberPriceLabel(nullptr)
+DishCard::DishCard(const Dish_qt &dish, double discountRate,
+                   int salesRank, int ratingRank,
+                   QWidget *parent)
+    : QFrame(parent), m_dish(dish), m_discountRate(discountRate),
+      m_salesRank(salesRank), m_ratingRank(ratingRank),
+      m_memberPriceLabel(nullptr)
 {
     setupUI(dish);
 }
@@ -69,11 +73,30 @@ void DishCard::setupUI(const Dish_qt &dish)
     auto *infoLayout = new QVBoxLayout();
     infoLayout->setSpacing(4);
 
+    // 菜名 + 排行榜徽章（同一行）
+    auto *nameRow = new QHBoxLayout();
+    nameRow->setSpacing(8);
+    nameRow->setContentsMargins(0, 0, 0, 0);
+
     m_nameLabel = new QLabel(dish.name, this);
     m_nameLabel->setStyleSheet(
         "font-size: 16px; font-weight: 600; color: #333333;"
         "border: none; background: transparent;");
-    infoLayout->addWidget(m_nameLabel);
+    nameRow->addWidget(m_nameLabel);
+
+    auto makeBadge = [&](const QString &text, const char *bg) {
+        auto *badge = new QLabel(text, this);
+        badge->setStyleSheet(QString(
+            "font-size: 10px; color: #FFFFFF; background: %1;"
+            "border-radius: 8px; padding: 1px 7px; border: none;").arg(bg));
+        badge->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        nameRow->addWidget(badge);
+    };
+    if (m_salesRank > 0)  makeBadge(QString("本店销量第%1").arg(m_salesRank), "#FF6200");
+    if (m_ratingRank > 0) makeBadge(QString("好评榜第%1").arg(m_ratingRank),  "#52C41A");
+    nameRow->addStretch();
+
+    infoLayout->addLayout(nameRow);
 
     m_descLabel = new QLabel(dish.description, this);
     m_descLabel->setStyleSheet(
@@ -102,6 +125,7 @@ void DishCard::setupUI(const Dish_qt &dish)
 
     auto *commentBtn = new QPushButton("查看评论 ›", this);
     commentBtn->setCursor(Qt::PointingHandCursor);
+    commentBtn->setFocusPolicy(Qt::NoFocus);
     commentBtn->setStyleSheet(
         "QPushButton { background: transparent; border: none;"
         "font-size: 11px; color: #AAAAAA; padding: 0; }"
@@ -153,6 +177,7 @@ void DishCard::setupUI(const Dish_qt &dish)
     m_addBtn = new QPushButton("+", this);
     m_addBtn->setFixedSize(30, 30);
     m_addBtn->setCursor(Qt::PointingHandCursor);
+    m_addBtn->setFocusPolicy(Qt::NoFocus);
     m_addBtn->setStyleSheet(R"(
         QPushButton {
             background: #ffd500;

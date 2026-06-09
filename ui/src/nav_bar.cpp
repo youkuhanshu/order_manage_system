@@ -147,6 +147,8 @@ void NavBar::setActiveNav(int pageIndex)
         btn->style()->unpolish(btn);
         btn->style()->polish(btn);
     }
+
+    m_dishCountLabel->setVisible(pageIndex == 2);
 }
 
 bool NavBar::eventFilter(QObject *obj, QEvent *event)
