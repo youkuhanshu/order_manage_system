@@ -1,4 +1,5 @@
 #include "order_system.h"
+#include "checkout_dialog.h"
 
 #include <QApplication>
 #include <QDialog>
@@ -263,6 +264,10 @@ void order_system::setupUI()
             QMessageBox::information(this, "提示", "购物车是空的，请先选择菜品。");
             return;
         }
+
+        // 结算前保存订单快照（checkout 后会 clearOrder）
+        QList<Dish_qt> orderedDishes = buildQtOrder();
+
         double total = m_orderService->checkout();
 
         // 从文件重新加载用户数据，同步最新的等级和消费
@@ -283,9 +288,34 @@ void order_system::setupUI()
         // 结算后加入排队队列，拿到取餐号
         m_myQueueId = m_queueService.in_queue(m_nextOrderId++);
 
-        QMessageBox::information(this, "结算成功",
-            QString("本次实付 ¥%1\n您的取餐号：%2\n可在「排队进度」查看进度")
-                .arg(total, 0, 'f', 2).arg(m_myQueueId));
+        // 收集本次订单的菜品 ID 和名称（去重）
+        QList<int> dishIds;
+        QStringList dishNames;
+        for (const auto &d : orderedDishes) {
+            if (!dishIds.contains(d.id)) {
+                dishIds.append(d.id);
+                dishNames.append(d.name);
+            }
+        }
+
+        // 弹出评论弹窗
+        CheckoutDialog dlg(dishNames, dishIds, total, m_myQueueId,
+                           m_currentUser.id, this);
+        dlg.exec();
+
+        CommentMsg cm = dlg.getComment();
+        if (cm.rate > 0) {
+            m_fl.AddCommentAndUpdateMenu(cm);
+            // 重新加载菜单和评论数据（评分和评论数已更新）
+            m_fl.LoadMenu();
+            m_fl.LoadComments();
+            m_allItems    = m_fl.getMenu_qt();
+            m_bySales     = m_fl.getRecommendBySales();
+            m_byRating    = m_fl.getRecommendByRating();
+            m_byComments  = m_fl.getRecommendByComments();
+            m_allComments = m_fl.getComments();
+        }
+
         switchPage(2);
     });
 
