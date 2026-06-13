@@ -545,3 +545,132 @@ m_orderService->addDish(d);
 ---
 
 *本 README 基于当前代码实际实现编写。功能状态（✅ 已完成 / ⚠️ 部分完成）会随开发推进变化，改动相关代码时请同步更新本文档。*
+
+# 注意事项
+1. CMakelists里记得改下路径 
+set(CMAKE_PREFIX_PATH "D:/Qt/6.9.3/mingw_64") # Qt Kit Dir
+2. 这一行记得加入系统的mingw32库
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets mingw32) # Qt5 Shared Library 
+3. 版本要从11到17
+set(CMAKE_CXX_STANDARD 17)
+4. 在终端临时设置Qt6Core的PATH
+# 如果您使用的是 PowerShell (窗口标题栏或命令提示符里有 "PS")
+$env:PATH = "D:\Qt\6.9.3\mingw_64\bin;" + $env:PATH
+
+
+# 使用说明：
+ mkdir build && cd build 
+ cmake ../ui -G "MinGW Makefiles"  
+ cmake --build .
+ ./order_system.exe
+
+---
+
+# 可移植打包流程（发给没装 Qt 的电脑运行）
+
+## 原理
+
+`windeployqt` 是 Qt 自带的部署工具，它会自动分析 exe 依赖了哪些 Qt 模块，然后把所有需要的 `.dll`、插件目录、翻译文件复制到 exe 旁边，形成一个**可以独立运行的文件夹**。
+
+## 完整步骤
+
+### 第一步：编译
+
+在项目根目录打开终端：
+
+```powershell
+# 先临时把 Qt 的 bin 目录加入 PATH（编译和 windeployqt 都要用）
+$env:PATH = "D:\Qt\6.9.3\mingw_64\bin;" + $env:PATH
+
+mkdir build
+cd build
+cmake ../ui -G "MinGW Makefiles"
+cmake --build .
+```
+
+### 第二步：部署 Qt 依赖
+
+```powershell
+# 仍在 build/ 目录下
+windeployqt order_system.exe --qmldir ..\ui\src
+```
+
+这一步会自动复制以下内容到 `build/`：
+
+| 复制内容 | 说明 |
+|---|---|
+| `Qt6Core.dll`, `Qt6Gui.dll`, `Qt6Widgets.dll` 等 | Qt 运行时库 |
+| `libgcc_s_seh-1.dll`, `libstdc++-6.dll`, `libwinpthread-1.dll` | MinGW 运行时库 |
+| `opengl32sw.dll`, `D3Dcompiler_47.dll` | 图形渲染回退 |
+| `platforms/` | Qt 平台插件（`qwindows.dll`，必须） |
+| `imageformats/` | 图片格式插件（jpg/png/gif/svg） |
+| `styles/` | 界面样式插件 |
+| `iconengines/`, `tls/`, `networkinformation/`, `generic/` | 其他必要插件 |
+| `translations/` | Qt 内置多语言翻译 |
+
+### 第三步：复制数据文件
+
+程序运行时从 `../storage/data/` 加载菜单、用户、评论等数据，所以需要在 exe 旁边建同样的目录：
+
+```powershell
+mkdir storage\data
+copy ..\storage\data\menu.txt          storage\data\
+copy ..\storage\data\users.txt         storage\data\
+copy ..\storage\data\queue.txt         storage\data\
+copy ..\storage\data\comment.txt       storage\data\
+copy ..\storage\data\history_order.txt storage\data\
+```
+
+### 第四步：打包成 zip
+
+```powershell
+# 回到项目根目录
+cd ..
+
+# 用 PowerShell 打包（排除编译中间文件）
+powershell -Command "Compress-Archive -Path build\order_system.exe,build\Qt6Core.dll,build\Qt6Gui.dll,build\Qt6Network.dll,build\Qt6Svg.dll,build\Qt6Widgets.dll,build\libgcc_s_seh-1.dll,build\libstdc++-6.dll,build\libwinpthread-1.dll,build\opengl32sw.dll,build\D3Dcompiler_47.dll,build\generic,build\iconengines,build\imageformats,build\networkinformation,build\platforms,build\styles,build\tls,build\translations,build\storage -DestinationPath order_system_portable.zip -Force"
+```
+
+生成的 `order_system_portable.zip`（约 26MB）就是可以分发的便携包。
+
+### 在目标电脑上使用
+
+1. 把 `order_system_portable.zip` 解压到任意目录
+2. 双击 `order_system.exe` 即可运行
+3. **不需要安装 Qt**，所有依赖已包含在文件夹内
+
+## 一键脚本（PowerShell）
+
+把上面的步骤合并成一个脚本，放在项目根目录运行：
+
+```powershell
+# deploy.ps1 — 一键编译 + 打包
+$env:PATH = "D:\Qt\6.9.3\mingw_64\bin;" + $env:PATH
+
+# 重新编译
+Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+mkdir build; cd build
+cmake ../ui -G "MinGW Makefiles"
+cmake --build .
+if ($LASTEXITCODE -ne 0) { Write-Error "编译失败"; exit 1 }
+
+# 部署 Qt 依赖
+windeployqt order_system.exe --qmldir ..\ui\src
+
+# 复制数据文件
+mkdir storage\data -Force
+copy ..\storage\data\menu.txt          storage\data\
+copy ..\storage\data\users.txt         storage\data\
+copy ..\storage\data\queue.txt         storage\data\
+copy ..\storage\data\comment.txt       storage\data\
+copy ..\storage\data\history_order.txt storage\data\
+
+cd ..
+
+# 打包
+powershell -Command "Compress-Archive -Path build\order_system.exe,build\Qt6Core.dll,build\Qt6Gui.dll,build\Qt6Network.dll,build\Qt6Svg.dll,build\Qt6Widgets.dll,build\libgcc_s_seh-1.dll,build\libstdc++-6.dll,build\libwinpthread-1.dll,build\opengl32sw.dll,build\D3Dcompiler_47.dll,build\generic,build\iconengines,build\imageformats,build\networkinformation,build\platforms,build\styles,build\tls,build\translations,build\storage -DestinationPath order_system_portable.zip -Force"
+
+Write-Host "✓ 打包完成: order_system_portable.zip" -ForegroundColor Green
+```
+
+以后更新程序后，只需要运行一次这个脚本就能得到新的便携包。
