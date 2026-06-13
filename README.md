@@ -546,26 +546,6 @@ m_orderService->addDish(d);
 
 *本 README 基于当前代码实际实现编写。功能状态（✅ 已完成 / ⚠️ 部分完成）会随开发推进变化，改动相关代码时请同步更新本文档。*
 
-# 注意事项
-1. CMakelists里记得改下路径 
-set(CMAKE_PREFIX_PATH "D:/Qt/6.9.3/mingw_64") # Qt Kit Dir
-2. 这一行记得加入系统的mingw32库
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets mingw32) # Qt5 Shared Library 
-3. 版本要从11到17
-set(CMAKE_CXX_STANDARD 17)
-4. 在终端临时设置Qt6Core的PATH
-# 如果您使用的是 PowerShell (窗口标题栏或命令提示符里有 "PS")
-$env:PATH = "D:\Qt\6.9.3\mingw_64\bin;" + $env:PATH
-
-
-# 使用说明：
- mkdir build && cd build 
- cmake ../ui -G "MinGW Makefiles"  
- cmake --build .
- ./order_system.exe
-
----
-
 # 可移植打包流程（发给没装 Qt 的电脑运行）
 
 ## 原理
