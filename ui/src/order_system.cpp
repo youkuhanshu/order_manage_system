@@ -293,10 +293,6 @@ void order_system::setupUI()
     connect(m_queuePage, &QueuePage::refreshRequested, this, [this]() {
         refreshQueuePage();
     });
-    connect(m_queuePage, &QueuePage::advanceRequested, this, [this]() {
-        m_queueService.advance_queue();   // 前台叫下一位取餐
-        refreshQueuePage();
-    });
     connect(m_queuePage, &QueuePage::backToMenuRequested, this, [this]() {
         switchPage(2);
     });

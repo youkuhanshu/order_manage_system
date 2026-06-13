@@ -29,7 +29,6 @@ public:
 
 signals:
     void refreshRequested();      ///< 点「刷新」
-    void advanceRequested();      ///< 点「叫号」，前台叫下一位取餐
     void backToMenuRequested();   ///< 返回菜单
 
 private:

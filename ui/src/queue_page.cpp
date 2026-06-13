@@ -168,20 +168,6 @@ void QueuePage::setupUI()
     connect(refreshBtn, &QPushButton::clicked, this, &QueuePage::refreshRequested);
     bottomBar->addWidget(refreshBtn);
 
-    auto *advanceBtn = new QPushButton("叫号（前台）", this);
-    advanceBtn->setFixedHeight(40);
-    advanceBtn->setCursor(Qt::PointingHandCursor);
-    advanceBtn->setStyleSheet(R"(
-        QPushButton {
-            background: #FFFFFF; color: #FF6200; border: 1px solid #FF6200;
-            border-radius: 8px; font-size: 14px; padding: 0 22px;
-        }
-        QPushButton:hover   { background: #FFF3EB; }
-        QPushButton:pressed { background: #FFE6D5; }
-    )");
-    connect(advanceBtn, &QPushButton::clicked, this, &QueuePage::advanceRequested);
-    bottomBar->addWidget(advanceBtn);
-
     bottomBar->addStretch();
 
     auto *backBtn = new QPushButton("← 返回菜单", this);
