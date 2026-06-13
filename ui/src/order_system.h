@@ -12,6 +12,7 @@
 #include "cart_page.h"
 #include "queue_page.h"
 #include <QTimer>
+#include <QRandomGenerator>
 
 /// 主窗口
 /// 职责：组装各页面组件、处理登录/注册业务逻辑、在各组件之间传递信号
@@ -30,7 +31,8 @@ private:
     bool checkUser(const QString &name, const QString &password);
     void doRegister(const QString &name, const QString &password);
     void refreshQueuePage();   // 把排队快照刷到 QueuePage
-    void setupQueueAutoAdvance(); // 配置 QueueService 自动叫号回调
+    void scheduleAutoAdvance(); // 用随机间隔调度下一次自动叫号
+    void onAutoAdvance();       // 定时器到期：执行叫号并调度下一次
     User u;
 
     // 界面和组件
