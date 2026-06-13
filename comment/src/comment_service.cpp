@@ -1,7 +1,9 @@
 #include"Comment_service.h"
 #include"algorithm"
 
-    
+// 静态成员定义（全局菜品平均分排名索引）
+std::vector<std::string> DishComment_msg::all_dish_rate_rank;
+
     //注册回调函数
     void CommentService::setCommentCallback(CommentCallback callback){
         on_updated_ = callback;
@@ -48,13 +50,20 @@
     
 
     void CommentService::UpdateCommentRank(CommentMsg msg){
+         // 空列表时直接追加（第一条评论）
+         if (rate_rank_.empty()) {
+             rate_rank_.push_back(comment_num_);
+             return;
+         }
          for(auto it = rate_rank_.begin();it != rate_rank_.end();it++){
             if(All_Comments_[*it].rate > msg.rate){
                 continue;
             }
             rate_rank_.insert(it,comment_num_);
-            break;
+            return;
         }
+        // 新评论评分最低，插入末尾
+        rate_rank_.push_back(comment_num_);
     }
 
     void CommentService::UpdateDishComment(CommentMsg msg){

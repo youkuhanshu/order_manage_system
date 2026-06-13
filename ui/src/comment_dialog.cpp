@@ -9,6 +9,7 @@
 #include <QDateTime>
 #include <QProgressBar>
 #include <QMessageBox>
+#include <algorithm>
 
 std::vector<User> CommentDialog::m_users;
 
@@ -31,18 +32,17 @@ CommentDialog::CommentDialog(const Dish_qt &dish, QWidget *parent) : QDialog(par
     }
 
     // 筛选该菜品的评论
-    QList<CommentMsg> comments;
     const std::string idStr = std::to_string(dish.id);
     for (const auto &c : allComments) {
         for (const auto &did : c.dish_ids) {
             if (did == idStr) {
-                comments.append(c);
+                m_comments.append(c);
                 break;
             }
         }
     }
 
-    setupUI(dish, comments);
+    setupUI(dish, m_comments);
 }
 
 void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &comments)
@@ -71,6 +71,29 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
     titleLabel->setStyleSheet(
         "font-size: 15px; color: #666666; border: none; background: transparent;");
     titleLayout->addWidget(titleLabel, 1);
+
+    // 排序切换
+    m_sortCombo = new QComboBox(titleBar);
+    m_sortCombo->addItem("按时间排序");
+    m_sortCombo->addItem("按评分排序");
+    m_sortCombo->setCurrentIndex(m_sortMode);
+    m_sortCombo->setStyleSheet(R"(
+        QComboBox {
+            background: #FFFFFF; border: 1px solid #E0E0E0; border-radius: 6px;
+            font-size: 12px; color: #666666; padding: 4px 8px;
+            min-width: 90px;
+        }
+        QComboBox:hover { border-color: #0085FF; }
+        QComboBox::drop-down { border: none; width: 20px; }
+        QComboBox QAbstractItemView {
+            background: #FFFFFF; border: 1px solid #E0E0E0;
+            selection-background-color: #EAF4FF; selection-color: #0085FF;
+            font-size: 12px; color: #666666;
+        }
+    )");
+    connect(m_sortCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &CommentDialog::onSortChanged);
+    titleLayout->addWidget(m_sortCombo);
 
     auto *closeBtn = new QPushButton("✕", titleBar);
     closeBtn->setFixedSize(28, 28);
@@ -160,9 +183,9 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
     auto *scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setStyleSheet(R"(
-        QScrollArea { 
+        QScrollArea {
             background: #F5F5F5;
-            border: none; 
+            border: none;
         }
         QScrollBar:vertical {
             width: 6px; background: transparent;
@@ -174,30 +197,79 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
     )");
 
-    auto *listContainer = new QWidget();
-    listContainer->setStyleSheet("background: #F5F5F5;");
-    auto *listLayout = new QVBoxLayout(listContainer);
-    listLayout->setContentsMargins(12, 12, 12, 12);
-    listLayout->setSpacing(8);
+    m_listContainer = new QWidget();
+    m_listContainer->setStyleSheet("background: #F5F5F5;");
+    m_listLayout = new QVBoxLayout(m_listContainer);
+    m_listLayout->setContentsMargins(12, 12, 12, 12);
+    m_listLayout->setSpacing(8);
 
     if (comments.isEmpty()) {
-        auto *emptyLabel = new QLabel("暂无评论~", listContainer);
+        auto *emptyLabel = new QLabel("暂无评论~", m_listContainer);
         emptyLabel->setAlignment(Qt::AlignCenter);
         emptyLabel->setStyleSheet(
             "font-size: 14px; color: #CCCCCC; padding: 40px;"
             "border: none; background: transparent;");
-        listLayout->addWidget(emptyLabel);
+        m_listLayout->addWidget(emptyLabel);
     } else {
         for (const auto &c : comments) {
-            listLayout->addWidget(makeCommentCard(c, listContainer));
+            m_listLayout->addWidget(makeCommentCard(c, m_listContainer));
         }
     }
-    listLayout->addStretch();
+    m_listLayout->addStretch();
 
-    scrollArea->setWidget(listContainer);
+    scrollArea->setWidget(m_listContainer);
     mainLayout->addWidget(scrollArea, 1);
 
     resize(540, 560);
+}
+
+// 排序模式切换
+void CommentDialog::onSortChanged(int index)
+{
+    if (index == m_sortMode) return;
+    m_sortMode = index;
+
+    // 按所选模式排序
+    if (m_sortMode == 0) {
+        // 按时间排序（降序：最新在前）
+        std::sort(m_comments.begin(), m_comments.end(),
+                  [](const CommentMsg &a, const CommentMsg &b) {
+                      return a.in_time > b.in_time;
+                  });
+    } else {
+        // 按评分排序（降序：高分在前）
+        std::sort(m_comments.begin(), m_comments.end(),
+                  [](const CommentMsg &a, const CommentMsg &b) {
+                      return a.rate > b.rate;
+                  });
+    }
+
+    refreshCommentList();
+}
+
+// 清空并重建评论卡片列表
+void CommentDialog::refreshCommentList()
+{
+    // 清除旧卡片
+    QLayoutItem *child;
+    while ((child = m_listLayout->takeAt(0)) != nullptr) {
+        if (child->widget()) child->widget()->deleteLater();
+        delete child;
+    }
+
+    if (m_comments.isEmpty()) {
+        auto *emptyLabel = new QLabel("暂无评论~", m_listContainer);
+        emptyLabel->setAlignment(Qt::AlignCenter);
+        emptyLabel->setStyleSheet(
+            "font-size: 14px; color: #CCCCCC; padding: 40px;"
+            "border: none; background: transparent;");
+        m_listLayout->addWidget(emptyLabel);
+    } else {
+        for (const auto &c : m_comments) {
+            m_listLayout->addWidget(makeCommentCard(c, m_listContainer));
+        }
+    }
+    m_listLayout->addStretch();
 }
 
 // 单条评论卡片

@@ -13,6 +13,7 @@ public:
     virtual void removeDish(const Dish& dish);
     virtual double calcCart();
     virtual double checkout();
+    void setUser(const User& user) { user_ = user; }  // 用户等级变化后同步更新
     virtual double getDiscountRate(const User& user_);
     virtual void updateUser(const User& user_, const std::vector<Dish>& order_, double total_price_);
     static std::vector<std::vector<Dish>> loadUserHistoryOrders(const User& user_, const std::string& history_path);

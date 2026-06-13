@@ -6,6 +6,7 @@
 #include "FileManager.h"
 #include "Order_mgr.hpp"
 #include "queue_service.h"
+#include "Comment_service.h"
 #include "nav_bar.h"
 #include "auth_page.h"
 #include "menu_page.h"
@@ -33,6 +34,7 @@ private:
     void refreshQueuePage();   // 把排队快照刷到 QueuePage
     void scheduleAutoAdvance(); // 用随机间隔调度下一次自动叫号
     void onAutoAdvance();       // 定时器到期：执行叫号并调度下一次
+    bool m_autoAdvancePending = false; // 防止重复调度
     User u;
 
     // 界面和组件
@@ -61,6 +63,9 @@ private:
 
     // 排队
     QueueService m_queueService;     // 复用后端排队逻辑
+
+    // 评论排序
+    CommentService m_commentService; // 评论排序与推荐
     int m_nextOrderId = 101;         // 简单的订单号自增
     int m_myQueueId   = -1;          // 当前用户最近一次的取餐号
 

@@ -31,6 +31,10 @@ void order_system::loadData()
     m_fl.LoadComments();
 
     m_allComments = m_fl.getComments();
+    // 将所有已有评论注入 CommentService（用于排序与推荐）
+    for (const auto &c : m_allComments) {
+        m_commentService.AddComment(c);
+    }
     m_allItems = m_fl.getMenu_qt();
     m_categories = m_fl.getCategories_qt();
     m_bySales = m_fl.getRecommendBySales();
@@ -280,6 +284,7 @@ void order_system::setupUI()
             }
         }
 
+        m_orderService->setUser(m_currentUser);  // 同步最新用户等级到 OrderService
         m_orderService->clearOrder();
         m_navBar->setUser(m_currentUser);
         m_navBar->setDishCount(0);
@@ -307,6 +312,7 @@ void order_system::setupUI()
         CommentMsg cm = dlg.getComment();
         if (cm.rate > 0) {
             m_fl.AddCommentAndUpdateMenu(cm);
+            m_commentService.AddComment(cm);   // 同步到 CommentService
             // 重新加载菜单和评论数据（评分和评论数已更新）
             m_fl.LoadMenu();
             m_fl.LoadComments();
@@ -413,7 +419,7 @@ void order_system::doRegister(const QString &name, const QString &password)
 //  随机自动叫号
 void order_system::scheduleAutoAdvance()
 {
-    if (m_queueService.is_Empty()) {
+    if (m_queueService.is_Empty() || m_autoAdvancePending) {
         return;
     }
 
@@ -421,11 +427,14 @@ void order_system::scheduleAutoAdvance()
     int delaySec  = QRandomGenerator::global()->bounded(5, 21);
     int delayMsec = delaySec * 1000;
 
+    m_autoAdvancePending = true;
     QTimer::singleShot(delayMsec, this, &order_system::onAutoAdvance);
 }
 
 void order_system::onAutoAdvance()
 {
+    m_autoAdvancePending = false;
+
     if (!m_queueService.is_Empty()) {
         m_queueService.advance_queue();   // 预约队列第一人 → 取餐队列
         refreshQueuePage();
