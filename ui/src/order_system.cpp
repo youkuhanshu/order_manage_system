@@ -287,6 +287,7 @@ void order_system::setupUI()
 
         // 结算后加入排队队列，拿到取餐号
         m_myQueueId = m_queueService.in_queue(m_nextOrderId++);
+        scheduleAutoAdvance();  // 启动随机自动叫号
 
         // 收集本次订单的菜品 ID 和名称（去重）
         QList<int> dishIds;
@@ -406,5 +407,30 @@ void order_system::doRegister(const QString &name, const QString &password)
     m_currentUser = u;
 
     m_fl.addUser(u.id, u.name, u.password);
+}
+
+
+//  随机自动叫号
+void order_system::scheduleAutoAdvance()
+{
+    if (m_queueService.is_Empty()) {
+        return;
+    }
+
+    // 生成 5~20 秒随机延迟（毫秒）
+    int delaySec  = QRandomGenerator::global()->bounded(5, 21);
+    int delayMsec = delaySec * 1000;
+
+    QTimer::singleShot(delayMsec, this, &order_system::onAutoAdvance);
+}
+
+void order_system::onAutoAdvance()
+{
+    if (!m_queueService.is_Empty()) {
+        m_queueService.advance_queue();   // 预约队列第一人 → 取餐队列
+        refreshQueuePage();
+    }
+
+    scheduleAutoAdvance();  // 调度下一次随机叫号
 }
 
