@@ -26,9 +26,9 @@ private:
     void setupUI(const Dish_qt &dish);
 
     Dish_qt m_dish;
-    double  m_discountRate;
-    int     m_salesRank;
-    int     m_ratingRank;
+    double m_discountRate;
+    int m_salesRank;
+    int m_ratingRank;
 
     QFrame *m_imageFrame; // 左侧图片占位
     QLabel *m_imageText; // 图片占位文字

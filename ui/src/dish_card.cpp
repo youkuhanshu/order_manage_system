@@ -7,9 +7,13 @@
 static const char *categoryColor(const QString &category)
 {
     if (category == "热菜") return "#FF6B4A";
+    if (category == "凉菜") return "#58D68D";
+    if (category == "汤羹") return "#E8A87C";
     if (category == "主食") return "#FFB347";
     if (category == "饮品") return "#5DADE2";
     if (category == "甜品") return "#FF8CA3";
+    if (category == "烧烤") return "#E74C3C";
+    if (category == "小吃") return "#F39C12";
     return "#BBBBBB";
 }
 
