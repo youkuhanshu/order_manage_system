@@ -1,4 +1,5 @@
 #include "FileManager.h"
+#include "Comment_service.h"
 #include <algorithm>
 
 std::vector<Dish> FileManager::all_dishes_cpp;
@@ -242,10 +243,10 @@ std::vector<CommentMsg> FileManager::getComments() {
     return all_comments_;
 }
 
-// 追加一条评论并同步更新 menu.txt 中涉及菜品的评分和评论数
-void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment)
+// 追加与更新评论并同步到 menu.txt
+void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment, CommentService& cs)
 {
-    // 追加评论到 comment.txt
+    // 1. 追加评论到 comment.txt
     std::ofstream ofs;
     ofs.open(COMMENT_FILE_PATH, std::ios::app);
     if (!ofs.is_open()) {
@@ -256,87 +257,49 @@ void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment)
     ofs.close();
     all_comments_.push_back(comment);
 
-    // 读取 menu.txt 全部行
-    std::ifstream ifs;
-    ifs.open(MENU_FILE_PATH, std::ios::in);
-    if (!ifs.is_open()) {
-        std::cout << "无法打开菜单文件" << std::endl;
-        return;
-    }
-    std::vector<std::string> lines;
-    std::string line;
-    while (getline(ifs, line)) {
-        lines.push_back(line);
-    }
-    ifs.close();
+    // 2. 完成评分更新
+    cs.AddComment(comment);
 
-    // 对评论涉及的每个菜品，更新对应行的评分和评论数
-    for (size_t d = 0; d < comment.dish_ids.size(); d++) {
-        if (comment.dish_ids[d].empty()) {
-            continue;
+    // 3. 从 CommentService 同步评分和评论数到内存中的菜品数据
+    for (const auto& dishIdStr : comment.dish_ids) {
+        if (dishIdStr.empty()) continue;
+        int targetId = std::stoi(dishIdStr);
+
+        double newRating = cs.getDishAverRate(dishIdStr);
+
+        // 同步到 all_dishes_cpp
+        for (auto& dish : all_dishes_cpp) {
+            if (dish.id == targetId) {
+                dish.rating = newRating;
+                dish.comment_count++;  // CommentService 内部已 +1，这里同步
+                break;
+            }
         }
 
-        int targetId = std::stoi(comment.dish_ids[d]);
-
-        for (size_t i = 0; i < lines.size(); i++) {
-            if (lines[i].empty() || lines[i][0] == '#') continue;
-
-            // 格式：id name price desc sales rating category comment_count
-            int id, sales, commentCount;
-            double price, rating;
-
-            std::string name, description, category;
-            std::stringstream ss(lines[i]);
-
-            ss >> id >> name >> price >> description >> sales >> rating >> category >> commentCount;
-
-            if (id != targetId) {
-                continue;
+        // 同步到 all_dishes_qt
+        for (auto& dish_qt : all_dishes_qt) {
+            if (dish_qt.id == targetId) {
+                dish_qt.rating = newRating;
+                dish_qt.comment_count++;
+                break;
             }
-
-            // 更新评分和评论数
-            double newRating = (rating * commentCount + comment.rate) / (commentCount + 1);
-            commentCount++;
-
-            // 重组行（评分保留一位小数）
-            std::stringstream newLine;
-            newLine << id << " " << name << " " << price << " " << description << " " << sales << " " << std::fixed;
-            newLine.precision(1);
-            newLine << newRating << " " << category << " " << commentCount;
-            lines[i] = newLine.str();
-
-            // 同步内存中的数据
-            for (size_t j = 0; j < all_dishes_qt.size(); j++) {
-                if (all_dishes_qt[j].id == targetId) { 
-                    all_dishes_qt[j].rating = newRating; 
-                    break; 
-                }
-            }
-
-            for (size_t j = 0; j < all_dishes_cpp.size(); j++) {
-                if (all_dishes_cpp[j].id == targetId) { 
-                    all_dishes_cpp[j].rating = newRating; 
-                    break; 
-                }
-            }
-
-            break;
         }
     }
 
-    // 写回 menu.txt
+    // 4. 将更新后的 all_dishes_cpp 写回 menu.txt
     std::ofstream out;
     out.open(MENU_FILE_PATH, std::ios::out);
-
     if (!out.is_open()) {
         std::cout << "无法写入菜单文件" << std::endl;
         return;
     }
-
-    for (size_t i = 0; i < lines.size(); i++) {
-        out << lines[i] << "\n";
+    for (const auto& dish : all_dishes_cpp) {
+        out << dish.id << " " << dish.name << " " << dish.price << " "
+            << dish.description << " " << dish.sales << " ";
+        out.precision(1);
+        out << std::fixed << dish.rating << " " << dish.category << " "
+            << dish.comment_count << "\n";
     }
-    
     out.close();
 }
 

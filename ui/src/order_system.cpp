@@ -441,11 +441,10 @@ void order_system::onPickup(int queueId)
 
         CommentMsg cm = dlg.getComment();
         if (cm.rate > 0) {
-            m_fl.AddCommentAndUpdateMenu(cm);
-            m_commentService.AddComment(cm);   // 同步到 CommentService
-            // 重新加载菜单和评论数据（评分和评论数已更新）
-            m_fl.LoadMenu();
-            m_fl.LoadComments();
+            // FileManager 内部复用 CommentService 的评分更新机制，
+            // 同时完成文件写入 + 内存同步，无需再单独调用 AddComment / LoadMenu / LoadComments
+            m_fl.AddCommentAndUpdateMenu(cm, m_commentService);
+
             m_allItems    = m_fl.getMenu_qt();
             m_bySales     = m_fl.getRecommendBySales();
             m_byRating    = m_fl.getRecommendByRating();

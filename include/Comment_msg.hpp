@@ -54,7 +54,6 @@ static CommentMsg from_String(const std::string& str){
         if(last < len) msg.dish_ids.push_back(dish_ids_str.substr(last));  // 处理无尾逗号的最后一项
         return msg;
     }
-    //等着加个失败管理
     return msg;
 }
 };

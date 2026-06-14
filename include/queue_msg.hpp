@@ -31,7 +31,6 @@ static QueueMsg from_String(const std::string& str){
         msg.in_time = std::stoll(str.substr(p2 + 1));
         return msg;
     }
-    //等着加个失败管理
     return msg;
 }
 };

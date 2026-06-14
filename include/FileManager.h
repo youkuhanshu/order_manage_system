@@ -98,6 +98,8 @@ struct DishComment_msg_qt
     static QStringList all_dish_rate_rank; // 全菜品平均分排名索引
 };
 
+class CommentService; // 前向声明，用于复用评分更新逻辑
+
 // FileManager —— 文件读写
 class FileManager
 {
@@ -141,7 +143,7 @@ public:
     // 评论
     void LoadComments();
     void SaveComments(const std::vector<CommentMsg>& comments) const;
-    void AddCommentAndUpdateMenu(const CommentMsg& comment);
+    void AddCommentAndUpdateMenu(const CommentMsg& comment, CommentService& cs);
     static std::vector<CommentMsg> getComments();
 
     // 类型转换

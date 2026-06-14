@@ -3,6 +3,7 @@ build/
 .qtcreator/
 requirement.md
 book_arrangement/
+CMakeLists.txt
 # 编译产物
 *.o
 *.exe
