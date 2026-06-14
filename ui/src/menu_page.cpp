@@ -11,7 +11,7 @@
 #include <QDateTime>
 
 // ---- DeepSeek API 配置 ----
-const QString DEEPSEEK_API_KEY = "sk-3f77a42174714886b17756b869fee34a";  // TODO: 填入你的 API Key
+const QString DEEPSEEK_API_KEY = "sk-3f77a42174714886b17756b869fee34a";
 const QString DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
 
 MenuPage::MenuPage(QWidget *parent) : QWidget(parent)
@@ -386,7 +386,7 @@ void MenuPage::onSmartRecommend()
         QByteArray data = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(data);
 
-        // 从 JSON 中取出 choices 数组（通常只有 1 个元素）
+        // 从 JSON 中取出 choices 数组（OpenAI-api规范格式）
         QJsonArray choices = doc.object()["choices"].toArray();
         if (choices.isEmpty()) {
             showAIResponse("DeepSeek 未返回任何推荐内容。");
@@ -400,7 +400,7 @@ void MenuPage::onSmartRecommend()
             return;
         }
 
-        // ⑤ 把推荐文字显示到界面上
+        // 把推荐文字显示到界面上
         showAIResponse(content);
     });
 }
@@ -430,7 +430,7 @@ QString MenuPage::buildPrompt()
         "1. 菜单格式为：菜名 价格 描述 销量 评分 类型\n"
         "2. 综合考虑当前时间、季节以及长沙当地的天气因素\n"
         "3. 推荐3-5道菜品，每道菜品单独一行\n"
-        "4. 格式：菜名 - 推荐理由（简洁一句话）")
+        "4. 格式：菜名 - 推荐理由（只要一句话）")
         .arg(timeInfo)
         .arg(menu);
 }

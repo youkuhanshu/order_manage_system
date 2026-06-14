@@ -79,7 +79,7 @@ cmake --build .
 | 王五 | passwd1 | GOLD（黄金，8.5 折） |
 | 赵六 | pwd2024 | REGULAR（普通，原价） |
 
-也可以在登录页点「立即注册」创建新账号（新账号默认是 REGULAR 普通会员）。
+也可以在登录页点「立即注册」创建新账号（新账号默认是 REGULAR 普通会员）。注册时会先校验**用户名是否已存在**（存在则提示「该用户已存在」）、两次密码是否一致。
 
 ### 2.6 发布给别人用
 
@@ -418,6 +418,7 @@ double OrderService::checkout() {
 **底层支持**：
 
 - `CommentService`（`comment/src/comment_service.cpp`）已编入程序，启动时被喂入全量评论，提供 `getComment()`（评论弹窗的排序就走它）、`getDishComments()`、`getBest5Dishs()` 等接口。
+- 提交评价时 `FileManager::AddCommentAndUpdateMenu(评论, CommentService&)` 会调用 `CommentService::AddComment()` 算出该菜**最新平均分**，再把评分和评论数同步回内存并写回 `menu.txt`——也就是说**评分计算现在统一在 CommentService 里**，FileManager 只负责落盘，不再自己重算。
 
 ### 功能四：推荐点餐（销量 / 评分 Top5）✅ 已完成
 
@@ -432,8 +433,17 @@ for (int i = 0; i < qMin(5, copy.size()); i++)
     recommend_by_sales.append(copy[i]);   // 销量前 5
 ```
 
-- **「推荐」分类**：菜单左侧选「推荐」时，顶部出现三个切换按钮「销量最高 / 评分最高 / 最多评价」，对应展示这三个榜。
+- **「推荐」分类**：菜单左侧选「推荐」时，顶部出现**四个**切换按钮「销量最高 / 评分最高 / 最多评价 / 智能推荐」，前三个对应展示这三个榜。
 - **榜单徽章**：`MenuPage::refreshDishList` 会查出每道菜在销量榜/好评榜里的名次，传给 `DishCard`，卡片上就会显示「本店销量第 N」（橙色）或「好评榜第 N」（绿色）的小标签。
+
+#### 智能推荐（AI · DeepSeek）🆕 已完成
+
+点「智能推荐」按钮，会调用大模型 API（DeepSeek），让 AI 结合**当前时间、季节、长沙天气**和整张菜单，推荐 3~5 道菜：
+
+- 实现在 `MenuPage::onSmartRecommend()`：用 `QNetworkAccessManager` 向 DeepSeek 的 `chat/completions` 接口发一个 **HTTP POST**，请求体是用 `QJsonObject` 拼的 JSON（模型名 + 由「菜单 + 时间 + 地点」组成的提示词 `buildPrompt()`）。
+- 请求是**异步**的：点了之后界面先显示「正在请求 DeepSeek 智能推荐…」，等服务器回复到达（`QNetworkReply::finished` 信号）再把 AI 返回的文字解析出来，显示在只读文本框里。
+- 选「智能推荐」时会隐藏菜品卡片、显示 AI 文本区；切回其它推荐方式则反过来。
+- 依赖 **Qt6::Network** 模块（`CMakeLists.txt` 里已 `find_package(Qt6 COMPONENTS Widgets Network)` 并链接 `Qt6::Network`），运行时还需要**联网 + 有效的 API Key**。
 
 ### 功能五：点餐记忆（复制历史订单）✅ 已完成
 
@@ -530,9 +540,10 @@ m_orderService->addDish(d);
 
 | 项目 | 现状 | 建议 |
 |---|---|---|
+| **AI 推荐的 API Key 硬编码在源码** | `menu_page.cpp` 顶部直接写死了 DeepSeek 的 API Key；且必须联网、Key 有效才能用 | 把 Key 移到配置文件/环境变量，不要提交到公开仓库；离线/失败时已有「网络请求失败」提示 |
 | **排队持久化** | 排队是内存态，关程序就清空，不读 `queue.txt` | 用 `FileManager::LoadQueue/SaveQueue` 在启动时载入、变动时写回 |
 | **`addUser` 写入格式** | `FileManager::addUser` 把会员等级写成了整数 `0`，且没写总消费字段 | 改成写字符串 `"REGULAR"` 并补上 `total_spent`（如 `0`） |
-| **好评榜推荐未走 CommentService** | 评论排序已统一走 `CommentService::getComment`；但好评 Top5 推荐仍由 `FileManager` 预排，`getBest5Dishs` 暂未被界面调用 | 把好评榜推荐也改为走 `getBest5Dishs` |
+| **好评榜推荐未走 CommentService** | 评论排序、评分更新已走 `CommentService`；但好评 Top5 推荐仍由 `FileManager` 预排，`getBest5Dishs` 暂未被界面调用 | 把好评榜推荐也改为走 `getBest5Dishs` |
 | **菜名/描述不能含空格** | menu.txt 用空格分隔字段，菜名带空格会解析错位 | 约定不带空格，或改用其他分隔符 |
 
 ---
