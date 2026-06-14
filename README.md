@@ -178,7 +178,7 @@ order_manage_system/
 │
 ├── order/src/Order_mgr.cpp      # OrderService 的实现
 ├── queue/src/queue_service.cpp  # QueueService 的实现
-├── comment/src/comment_service.cpp  # CommentService 的实现（已编入程序）
+├── comment/src/comment_service.cpp  # CommentService 的实现
 │
 ├── ui/                          # ← 界面层，程序主体
 │   ├── CMakeLists.txt           # 构建脚本（唯一入口）

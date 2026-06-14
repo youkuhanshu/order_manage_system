@@ -294,18 +294,35 @@ void order_system::setupUI()
         m_myQueueId = m_queueService.in_queue(m_nextOrderId++);
         scheduleAutoAdvance();  // 启动随机自动叫号
 
-        // 收集本次订单的菜品 ID 和名称（去重）
-        QList<int> dishIds;
-        QStringList dishNames;
+        // 收集本次订单的菜品 ID 和名称（去重），暂存用于取餐时评价
+        m_lastOrderDishIds.clear();
+        m_lastOrderDishNames.clear();
         for (const auto &d : orderedDishes) {
-            if (!dishIds.contains(d.id)) {
-                dishIds.append(d.id);
-                dishNames.append(d.name);
+            if (!m_lastOrderDishIds.contains(d.id)) {
+                m_lastOrderDishIds.append(d.id);
+                m_lastOrderDishNames.append(d.name);
             }
         }
+        m_lastOrderTotal = total;
 
-        // 弹出评论弹窗
-        CheckoutDialog dlg(dishNames, dishIds, total, m_myQueueId,
+        // 跳到排队页面查看进度，评价将在点击「请取餐」时触发
+        switchPage(4);
+    });
+
+    // ---- 排队页信号连接 ----
+    connect(m_queuePage, &QueuePage::refreshRequested, this, [this]() {
+        refreshQueuePage();
+    });
+    connect(m_queuePage, &QueuePage::backToMenuRequested, this, [this]() {
+        switchPage(2);
+    });
+    connect(m_queuePage, &QueuePage::mealTakenRequested, this, [this](int queueId) {
+        // 从取餐队列中移除
+        m_queueService.pickup_meal(queueId);
+
+        // 弹出评价弹窗
+        CheckoutDialog dlg(m_lastOrderDishNames, m_lastOrderDishIds,
+                           m_lastOrderTotal, queueId,
                            m_currentUser.id, this);
         dlg.exec();
 
@@ -323,14 +340,10 @@ void order_system::setupUI()
             m_allComments = m_fl.getComments();
         }
 
-        switchPage(2);
-    });
-
-    // ---- 排队页信号连接 ----
-    connect(m_queuePage, &QueuePage::refreshRequested, this, [this]() {
+        // 刷新排队页显示（自己的号已消失，显示"已取餐，感谢惠顾"）
         refreshQueuePage();
-    });
-    connect(m_queuePage, &QueuePage::backToMenuRequested, this, [this]() {
+
+        // 返回菜单页
         switchPage(2);
     });
 

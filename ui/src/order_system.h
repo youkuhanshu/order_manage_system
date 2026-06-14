@@ -69,6 +69,11 @@ private:
     int m_nextOrderId = 101;         // 简单的订单号自增
     int m_myQueueId   = -1;          // 当前用户最近一次的取餐号
 
+    // 暂存最近一次订单信息，取餐时用于评价
+    QList<int>   m_lastOrderDishIds;
+    QStringList  m_lastOrderDishNames;
+    double       m_lastOrderTotal = 0.0;
+
     FileManager m_fl;
 
     /// 把 m_orderService->getOrder() 转成 QList<Dish_qt> 供 CartPage 使用

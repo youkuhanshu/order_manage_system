@@ -30,6 +30,7 @@ public:
 signals:
     void refreshRequested();      ///< 点「刷新」
     void backToMenuRequested();   ///< 返回菜单
+    void mealTakenRequested(int queueId); ///< 点「请取餐」，触发评价
 
 private:
     void setupUI();

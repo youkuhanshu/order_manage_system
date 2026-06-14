@@ -320,7 +320,26 @@ QFrame *QueuePage::makeTicketRow(const QueueMsg &msg, int position, bool isMine,
     rowLayout->addLayout(infoLayout, 1);
 
     // 右侧状态
-    if (ready) {
+    if (ready && isMine) {
+        // 自己的取餐号 → 可点击的「请取餐」按钮，点击后弹出评价
+        auto *takeBtn = new QPushButton("请取餐", row);
+        takeBtn->setCursor(Qt::PointingHandCursor);
+        takeBtn->setFixedHeight(28);
+        takeBtn->setStyleSheet(R"(
+            QPushButton {
+                font-size: 12px; color: #FFFFFF; background: #FF6200;
+                border-radius: 14px; border: none; padding: 0 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover   { background: #E55A00; }
+            QPushButton:pressed { background: #CC4F00; }
+        )");
+        int qid = msg.queue_id;
+        connect(takeBtn, &QPushButton::clicked, this, [this, qid]() {
+            emit mealTakenRequested(qid);
+        });
+        rowLayout->addWidget(takeBtn);
+    } else if (ready) {
         auto *pill = new QLabel("请取餐", row);
         pill->setAlignment(Qt::AlignCenter);
         pill->setFixedHeight(24);

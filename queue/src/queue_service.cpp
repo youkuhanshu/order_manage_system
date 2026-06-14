@@ -33,6 +33,18 @@ void QueueService::advance_queue(){
     }
 }
 
+void QueueService::pickup_meal(int queue_id){
+    for (auto it = taking_.begin(); it != taking_.end(); ++it) {
+        if (it->queue_id == queue_id) {
+            taking_.erase(it);
+            if (on_updated_) {
+                on_updated_("pickup_meal", &taking_);
+            }
+            return;
+        }
+    }
+}
+
 bool QueueService::is_Empty() const{
     return waiting_.empty();
 }
