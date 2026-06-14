@@ -33,6 +33,16 @@ void QueueService::advance_queue(){
     }
 }
 
+//顾客取餐：从取餐队列里移除该号
+void QueueService::take_meal(int queue_id){
+    for(auto it = taking_.begin(); it != taking_.end(); ++it){
+        if(it->queue_id == queue_id){
+            taking_.erase(it);
+            break;
+        }
+    }
+}
+
 bool QueueService::is_Empty() const{
     return waiting_.empty();
 }

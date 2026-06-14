@@ -95,19 +95,6 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
             this, &CommentDialog::onSortChanged);
     titleLayout->addWidget(m_sortCombo);
 
-    auto *closeBtn = new QPushButton("✕", titleBar);
-    closeBtn->setFixedSize(28, 28);
-    closeBtn->setCursor(Qt::PointingHandCursor);
-    closeBtn->setStyleSheet(R"(
-        QPushButton {
-            background: transparent; border: none;
-            font-size: 14px; color: #AAAAAA; border-radius: 14px;
-        }
-        QPushButton:hover { background: #F0F0F0; color: #666666; }
-    )");
-    connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
-    titleLayout->addWidget(closeBtn);
-
     mainLayout->addWidget(titleBar);
 
     // ---- 评分概览卡片 ----

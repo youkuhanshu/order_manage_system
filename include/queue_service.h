@@ -25,7 +25,8 @@ public:
 
     //功能函数
     int in_queue(int order_id);     //加入排队队列
-    void advance_queue();           //有人取到餐
+    void advance_queue();           //叫号：预约队列队首 → 取餐队列
+    void take_meal(int queue_id);   //顾客取餐：把该号移出取餐队列
     bool is_Empty() const;
     bool is_too_long();             //等待时间是否超过阈值
 

@@ -151,22 +151,9 @@ void QueuePage::setupUI()
     mainLayout->addLayout(listsLayout, 1);
 
     // ---- 底部操作栏 ----
+    // 进度无需手动刷新：切到本页、定时叫号、取餐时都会自动刷新
     auto *bottomBar = new QHBoxLayout();
     bottomBar->setSpacing(10);
-
-    auto *refreshBtn = new QPushButton("刷新进度", this);
-    refreshBtn->setFixedHeight(40);
-    refreshBtn->setCursor(Qt::PointingHandCursor);
-    refreshBtn->setStyleSheet(R"(
-        QPushButton {
-            background: #0085FF; color: #FFFFFF; border: none;
-            border-radius: 8px; font-size: 14px; font-weight: bold; padding: 0 22px;
-        }
-        QPushButton:hover   { background: #0073E6; }
-        QPushButton:pressed { background: #0060BF; }
-    )");
-    connect(refreshBtn, &QPushButton::clicked, this, &QueuePage::refreshRequested);
-    bottomBar->addWidget(refreshBtn);
 
     bottomBar->addStretch();
 
@@ -321,13 +308,23 @@ QFrame *QueuePage::makeTicketRow(const QueueMsg &msg, int position, bool isMine,
 
     // 右侧状态
     if (ready) {
-        auto *pill = new QLabel("请取餐", row);
-        pill->setAlignment(Qt::AlignCenter);
-        pill->setFixedHeight(24);
-        pill->setStyleSheet(
-            "font-size: 12px; color: #FFFFFF; background: #FF6200;"
-            "border-radius: 12px; padding: 0 12px;");
-        rowLayout->addWidget(pill);
+        // 「取餐」按钮：点击后由主窗口弹出评价窗并把该号移出取餐队列
+        auto *takeBtn = new QPushButton("取餐", row);
+        takeBtn->setCursor(Qt::PointingHandCursor);
+        takeBtn->setFixedHeight(28);
+        takeBtn->setStyleSheet(R"(
+            QPushButton {
+                font-size: 12px; color: #FFFFFF; background: #FF6200;
+                border: none; border-radius: 14px; padding: 0 18px; font-weight: bold;
+            }
+            QPushButton:hover   { background: #E55A00; }
+            QPushButton:pressed { background: #CC5000; }
+        )");
+        const int qid = msg.queue_id;
+        connect(takeBtn, &QPushButton::clicked, this, [this, qid]() {
+            emit pickupRequested(qid);
+        });
+        rowLayout->addWidget(takeBtn);
     } else {
         auto *aheadLabel = new QLabel(
             position == 0 ? "即将叫号" : QString("前面 %1 桌").arg(position), row);

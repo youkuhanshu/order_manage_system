@@ -14,6 +14,15 @@
 #include "queue_page.h"
 #include <QTimer>
 #include <QRandomGenerator>
+#include <QMap>
+
+/// 一笔“已下单、待取餐”的订单信息，取餐时用来弹评价窗
+struct PendingReview {
+    QStringList dishNames;   // 本单菜品名（去重，用于展示）
+    QList<int>  dishIds;     // 对应菜品 ID（用于构建评论）
+    double      total  = 0.0; // 实付金额
+    int         userId = 0;   // 下单用户 ID
+};
 
 /// 主窗口
 /// 职责：组装各页面组件、处理登录/注册业务逻辑、在各组件之间传递信号
@@ -34,6 +43,7 @@ private:
     void refreshQueuePage();   // 把排队快照刷到 QueuePage
     void scheduleAutoAdvance(); // 用随机间隔调度下一次自动叫号
     void onAutoAdvance();       // 定时器到期：执行叫号并调度下一次
+    void onPickup(int queueId); // 顾客点「取餐」：弹评价窗 + 出队
     bool m_autoAdvancePending = false; // 防止重复调度
     User u;
 
@@ -68,6 +78,9 @@ private:
     CommentService m_commentService; // 评论排序与推荐
     int m_nextOrderId = 101;         // 简单的订单号自增
     int m_myQueueId   = -1;          // 当前用户最近一次的取餐号
+
+    // 取餐号 → 待评价订单信息（结算时存入，取餐时取出弹评价窗）
+    QMap<int, PendingReview> m_pendingReviews;
 
     FileManager m_fl;
 

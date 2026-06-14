@@ -73,8 +73,7 @@ void order_system::setupUI()
         switchPage(0);
     });
 
-    auto *historyOrderBtn = new QPushButton("历史订单点菜", m_navBar);
-    historyOrderBtn->setVisible(false);
+    // 历史订单点菜：入口在购物车空状态按钮（CartPage::historyOrderRequested）
     auto showHistoryOrderDialog = [this]() {
         if (m_orderService == nullptr || m_currentUser.name.empty()) {
             QMessageBox::information(this, "提示", "请先登录后再查看历史订单。");
@@ -294,44 +293,31 @@ void order_system::setupUI()
         m_myQueueId = m_queueService.in_queue(m_nextOrderId++);
         scheduleAutoAdvance();  // 启动随机自动叫号
 
-        // 收集本次订单的菜品 ID 和名称（去重）
-        QList<int> dishIds;
-        QStringList dishNames;
+        // 收集本次订单的菜品 ID 和名称（去重），暂存起来，等取餐时再评价
+        PendingReview pr;
+        pr.total  = total;
+        pr.userId = m_currentUser.id;
         for (const auto &d : orderedDishes) {
-            if (!dishIds.contains(d.id)) {
-                dishIds.append(d.id);
-                dishNames.append(d.name);
+            if (!pr.dishIds.contains(d.id)) {
+                pr.dishIds.append(d.id);
+                pr.dishNames.append(d.name);
             }
         }
+        m_pendingReviews.insert(m_myQueueId, pr);
 
-        // 弹出评论弹窗
-        CheckoutDialog dlg(dishNames, dishIds, total, m_myQueueId,
-                           m_currentUser.id, this);
-        dlg.exec();
-
-        CommentMsg cm = dlg.getComment();
-        if (cm.rate > 0) {
-            m_fl.AddCommentAndUpdateMenu(cm);
-            m_commentService.AddComment(cm);   // 同步到 CommentService
-            // 重新加载菜单和评论数据（评分和评论数已更新）
-            m_fl.LoadMenu();
-            m_fl.LoadComments();
-            m_allItems    = m_fl.getMenu_qt();
-            m_bySales     = m_fl.getRecommendBySales();
-            m_byRating    = m_fl.getRecommendByRating();
-            m_byComments  = m_fl.getRecommendByComments();
-            m_allComments = m_fl.getComments();
-        }
-
-        switchPage(2);
+        // 不在这里弹评价窗了：提示取餐号，跳到排队页等待叫号
+        QMessageBox::information(this, "结算成功",
+            QString("实付 ¥%1\n您的取餐号：%2\n请在排队页等待叫号，取餐时可评价")
+                .arg(total, 0, 'f', 2).arg(m_myQueueId));
+        switchPage(4);
     });
 
     // ---- 排队页信号连接 ----
-    connect(m_queuePage, &QueuePage::refreshRequested, this, [this]() {
-        refreshQueuePage();
-    });
     connect(m_queuePage, &QueuePage::backToMenuRequested, this, [this]() {
         switchPage(2);
+    });
+    connect(m_queuePage, &QueuePage::pickupRequested, this, [this](int queueId) {
+        onPickup(queueId);
     });
 
     m_stackedWidget->addWidget(m_loginPage);    // index 0 : 登录页
@@ -441,5 +427,40 @@ void order_system::onAutoAdvance()
     }
 
     scheduleAutoAdvance();  // 调度下一次随机叫号
+}
+
+//  顾客点「取餐」：先弹评价窗（若该单还没评价），再把号移出取餐队列
+void order_system::onPickup(int queueId)
+{
+    // 1) 弹出评价窗——只有这单还存着待评价信息时才弹
+    if (m_pendingReviews.contains(queueId)) {
+        PendingReview pr = m_pendingReviews.value(queueId);
+
+        CheckoutDialog dlg(pr.dishNames, pr.dishIds, pr.total, queueId, pr.userId, this);
+        dlg.exec();
+
+        CommentMsg cm = dlg.getComment();
+        if (cm.rate > 0) {
+            m_fl.AddCommentAndUpdateMenu(cm);
+            m_commentService.AddComment(cm);   // 同步到 CommentService
+            // 重新加载菜单和评论数据（评分和评论数已更新）
+            m_fl.LoadMenu();
+            m_fl.LoadComments();
+            m_allItems    = m_fl.getMenu_qt();
+            m_bySales     = m_fl.getRecommendBySales();
+            m_byRating    = m_fl.getRecommendByRating();
+            m_byComments  = m_fl.getRecommendByComments();
+            m_allComments = m_fl.getComments();
+            // 折扣不变，但评分/榜单变了，回菜单时会用到最新数据
+            m_menuPage->setData(m_allItems, m_bySales, m_byRating, m_byComments, m_categories);
+            m_menuPage->setDiscountRate(m_orderService->getDiscountRate(m_currentUser));
+        }
+
+        m_pendingReviews.remove(queueId);  // 评价过/跳过都不再重复弹
+    }
+
+    // 2) 取餐：把该号移出取餐队列，刷新排队显示
+    m_queueService.take_meal(queueId);
+    refreshQueuePage();
 }
 

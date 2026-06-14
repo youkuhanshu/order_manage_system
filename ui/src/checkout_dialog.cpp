@@ -6,12 +6,7 @@
 #include <QScrollArea>
 #include <ctime>
 
-CheckoutDialog::CheckoutDialog(const QStringList &dishNames,
-                               const QList<int>   &dishIds,
-                               double              total,
-                               int                 queueId,
-                               int                 userId,
-                               QWidget            *parent)
+CheckoutDialog::CheckoutDialog(const QStringList &dishNames, const QList<int> &dishIds, double total, int queueId, int userId, QWidget *parent)
     : QDialog(parent)
     , m_dishNames(dishNames)
     , m_dishIds(dishIds)
@@ -24,7 +19,7 @@ CheckoutDialog::CheckoutDialog(const QStringList &dishNames,
 
 void CheckoutDialog::setupUI()
 {
-    setWindowTitle("结算成功");
+    setWindowTitle("取餐成功");
     setMinimumWidth(440);
     setMaximumWidth(520);
     setStyleSheet("QDialog { background: #F5F5F5; }");
@@ -44,7 +39,7 @@ void CheckoutDialog::setupUI()
     headerLayout->setSpacing(10);
 
     // 结算成功标题
-    auto *titleLabel = new QLabel("🎉 结算成功", headerCard);
+    auto *titleLabel = new QLabel("🎉 取餐成功", headerCard);
     titleLabel->setStyleSheet(
         "font-size: 20px; font-weight: bold; color: #333333;"
         "border: none; background: transparent;");
@@ -238,7 +233,8 @@ void CheckoutDialog::onStarClicked(int star)
     // 再次点击同一颗星 → 取消评分；否则设为新评分
     if (m_rating == star) {
         m_rating = 0;
-    } else {
+    } 
+    else {
         m_rating = star;
     }
     updateStars();
@@ -256,7 +252,8 @@ void CheckoutDialog::updateStars()
                 }
                 QPushButton:hover { color: #E6A500; }
             )");
-        } else {
+        } 
+        else {
             m_starBtns[i]->setStyleSheet(R"(
                 QPushButton {
                     background: transparent; border: none;

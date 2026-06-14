@@ -144,7 +144,7 @@ void FileManager::addUser(int id, std::string name, std::string password) {
     int level = 0;
 
     ofs.open(USER_FILE_PATH, std::ios::app);
-    ofs << "\n" << id << " " << name << " " << password << " " << level << std::endl;
+    ofs << "\n" << id << " " << name << " " << password << " " << level;
 
     ofs.close();
 }

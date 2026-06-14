@@ -163,14 +163,21 @@ void MenuPage::onCategoryChanged(int row)
 void MenuPage::switchRecommendMethod(int index)
 {
     switch (index) {
-        case 0: m_recommendMethod = "销量最高"; break;
-        case 1: m_recommendMethod = "评分最高"; break;
-        case 2: m_recommendMethod = "最多评价"; break;
-        default: break;
+        case 0: 
+            m_recommendMethod = "销量最高"; 
+            break;
+        case 1: 
+            m_recommendMethod = "评分最高"; 
+            break;
+        case 2: 
+            m_recommendMethod = "最多评价"; 
+            break;
+        default: 
+            break;
     }
 
-    m_mostSaled->setProperty("active",     index == 0);
-    m_highScore->setProperty("active",     index == 1);
+    m_mostSaled->setProperty("active", index == 0);
+    m_highScore->setProperty("active", index == 1);
     m_mostCommented->setProperty("active", index == 2);
 
     for (auto *btn : {m_mostSaled, m_highScore, m_mostCommented}) {
@@ -196,13 +203,19 @@ void MenuPage::refreshDishList(const QString &category)
         // 查找该菜品在销量 Top5 / 好评 Top5 中的名次（找不到则为 0）
         int salesRank = 0, ratingRank = 0;
         for (int i = 0; i < m_bySales.size(); i++) {
-            if (m_bySales[i].id == dish.id) { salesRank = i + 1; break; }
+            if (m_bySales[i].id == dish.id) { 
+                salesRank = i + 1; 
+                break; 
+            }
         }
         for (int i = 0; i < m_byRating.size(); i++) {
-            if (m_byRating[i].id == dish.id) { ratingRank = i + 1; break; }
+            if (m_byRating[i].id == dish.id) { 
+                ratingRank = i + 1; 
+                break; 
+            }
         }
         auto *card = new DishCard(dish, m_discountRate, salesRank, ratingRank, m_dishContainer);
-        connect(card, &DishCard::addClicked,     this, [this](int id) { emit addDishClicked(id); });
+        connect(card, &DishCard::addClicked, this, [this](int id) { emit addDishClicked(id); });
         connect(card, &DishCard::commentClicked, this, [this](int dishId) {
             for (const auto &d : m_allItems) {
                 if (d.id == dishId) {
@@ -217,11 +230,19 @@ void MenuPage::refreshDishList(const QString &category)
     };
 
     if (category == "推荐") {
-        const QList<Dish_qt> *src = &m_bySales;
-        if      (m_recommendMethod == "评分最高") src = &m_byRating;
-        else if (m_recommendMethod == "最多评价") src = &m_byComments;
-        for (const auto &item : *src) makeCard(item);
-    } else {
+        QList<Dish_qt> recommend_dishes;
+        if (m_recommendMethod == "销量最高") {
+            recommend_dishes = m_bySales;
+        }
+        else if (m_recommendMethod == "评分最高") {
+            recommend_dishes = m_byRating;
+        }
+        else if (m_recommendMethod == "最多评价") {
+            recommend_dishes = m_byComments;
+        }
+        for (const auto &item : recommend_dishes) makeCard(item);
+    } 
+    else {
         for (const auto &item : m_allItems) {
             if (item.category == category || category == "全部")
                 makeCard(item);

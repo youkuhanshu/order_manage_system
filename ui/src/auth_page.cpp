@@ -1,42 +1,11 @@
 #include "auth_page.h"
+#include "FileManager.h"
 
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QFrame>
 #include <QMessageBox>
-
-// ================================================================
-//  共用样式
-// ================================================================
-namespace {
-
-const char *kInputStyle = R"(
-    QLineEdit {
-        border: 1px solid #E0E0E0; border-radius: 6px;
-        padding: 0 12px; font-size: 14px; color: #333333;
-        background: #FAFAFA;
-    }
-    QLineEdit:focus { border-color: #0085FF; background: #FFFFFF; }
-)";
-
-const char *kPrimaryBtnStyle = R"(
-    QPushButton {
-        background: #0085FF; color: #FFFFFF; border: none;
-        border-radius: 6px; font-size: 16px; font-weight: bold;
-    }
-    QPushButton:hover  { background: #0073E6; }
-    QPushButton:pressed { background: #0060BF; }
-)";
-
-const char *kLinkBtnStyle =
-    "QPushButton { background: transparent; border: none;"
-    "font-size: 12px; color: #999999; }"
-    "QPushButton:hover { color: #0085FF; }";
-
-const char *kTitleStyle =
-    "font-size: 20px; font-weight: bold; color: #333333;"
-    "border: none; background: transparent;";
 
 QFrame *makeCard(QWidget *parent, int height)
 {
@@ -53,16 +22,21 @@ QLineEdit *makeInput(QWidget *parent, const QString &placeholder, bool password)
     auto *edit = new QLineEdit(parent);
     edit->setPlaceholderText(placeholder);
     edit->setFixedHeight(40);
-    edit->setStyleSheet(kInputStyle);
+    edit->setStyleSheet(
+        R"(
+            QLineEdit {
+                border: 1px solid #E0E0E0; border-radius: 6px;
+                padding: 0 12px; font-size: 14px; color: #333333;
+                background: #FAFAFA;
+            }
+            QLineEdit:focus { border-color: #0085FF; background: #FFFFFF; }
+        )"
+    );
     if (password) edit->setEchoMode(QLineEdit::Password);
     return edit;
 }
 
-} // namespace
-
-// ================================================================
 //  登录页
-// ================================================================
 LoginPage::LoginPage(QWidget *parent) : QWidget(parent)
 {
     setupUI();
@@ -87,14 +61,18 @@ void LoginPage::setupUI()
     appTitle->setAlignment(Qt::AlignCenter);
     appTitle->setStyleSheet(
         "font-size: 30px; font-weight: bold; color: #333333;"
-        "border: none; background: transparent;");
+        "border: none; background: transparent;"
+    );
     cardLayout->addWidget(appTitle);
 
     cardLayout->addSpacing(10);
 
     auto *pageTitle = new QLabel("登录", card);
     pageTitle->setAlignment(Qt::AlignCenter);
-    pageTitle->setStyleSheet(kTitleStyle);
+    pageTitle->setStyleSheet(
+        "font-size: 20px; font-weight: bold; color: #333333;"
+        "border: none; background: transparent;"
+    );
     cardLayout->addWidget(pageTitle);
 
     cardLayout->addSpacing(20);
@@ -110,12 +88,25 @@ void LoginPage::setupUI()
     auto *loginBtn = new QPushButton("登  录", card);
     loginBtn->setFixedHeight(42);
     loginBtn->setCursor(Qt::PointingHandCursor);
-    loginBtn->setStyleSheet(kPrimaryBtnStyle);
+    loginBtn->setStyleSheet(
+        R"(
+            QPushButton {
+                background: #0085FF; color: #FFFFFF; border: none;
+                border-radius: 6px; font-size: 16px; font-weight: bold;
+            }
+            QPushButton:hover  { background: #0073E6; }
+            QPushButton:pressed { background: #0060BF; }
+        )"
+    );
     cardLayout->addWidget(loginBtn);
 
     auto *toRegBtn = new QPushButton("没有账号？立即注册", card);
     toRegBtn->setCursor(Qt::PointingHandCursor);
-    toRegBtn->setStyleSheet(kLinkBtnStyle);
+    toRegBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none;"
+        "font-size: 12px; color: #999999; }"
+        "QPushButton:hover { color: #0085FF; }"
+    );
     cardLayout->addWidget(toRegBtn);
 
     connect(loginBtn, &QPushButton::clicked, this, [this]() {
@@ -128,9 +119,7 @@ void LoginPage::setupUI()
     pageLayout->addWidget(card);
 }
 
-// ================================================================
 //  注册页
-// ================================================================
 RegisterPage::RegisterPage(QWidget *parent) : QWidget(parent)
 {
     setupUI();
@@ -158,7 +147,10 @@ void RegisterPage::setupUI()
 
     auto *pageTitle = new QLabel("注册", card);
     pageTitle->setAlignment(Qt::AlignCenter);
-    pageTitle->setStyleSheet(kTitleStyle);
+    pageTitle->setStyleSheet(
+        "font-size: 30px; font-weight: bold; color: #333333;"
+        "border: none; background: transparent;"
+    );
     cardLayout->addWidget(pageTitle);
 
     cardLayout->addSpacing(6);
@@ -177,18 +169,41 @@ void RegisterPage::setupUI()
     auto *regBtn = new QPushButton("注  册", card);
     regBtn->setFixedHeight(42);
     regBtn->setCursor(Qt::PointingHandCursor);
-    regBtn->setStyleSheet(kPrimaryBtnStyle);
+    regBtn->setStyleSheet(
+        R"(
+            QPushButton {
+                background: #0085FF; color: #FFFFFF; border: none;
+                border-radius: 6px; font-size: 16px; font-weight: bold;
+            }
+            QPushButton:hover  { background: #0073E6; }
+            QPushButton:pressed { background: #0060BF; }
+        )"
+    );
     cardLayout->addWidget(regBtn);
 
     auto *toLoginBtn = new QPushButton("已有账号？立即登录", card);
     toLoginBtn->setCursor(Qt::PointingHandCursor);
-    toLoginBtn->setStyleSheet(kLinkBtnStyle);
+    toLoginBtn->setStyleSheet(
+        "QPushButton { background: transparent; border: none;"
+        "font-size: 12px; color: #999999; }"
+        "QPushButton:hover { color: #0085FF; }"
+    );
     cardLayout->addWidget(toLoginBtn);
 
     connect(regBtn, &QPushButton::clicked, this, [this]() {
+        FileManager fl;
+        fl.LoadUsers();
+        std::vector<User> u = fl.getUsers_cpp();
+        for (size_t i = 0;i < u.size();i++) {
+            if (m_nameEdit->text() == u[i].name) {
+                QMessageBox::warning(this, "注册失败", "该用户已存在！");
+                return;
+            }
+        }
         if (m_pwdEdit->text() != m_pwdConfirmEdit->text()) {
             QMessageBox::warning(this, "注册失败", "两次输入的密码不相同！");
-        } else {
+        } 
+        else {
             emit registerClicked(m_nameEdit->text(), m_pwdEdit->text());
         }
     });

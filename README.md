@@ -24,7 +24,7 @@
 
 ## 1. 一句话理解这个项目
 
-这是一个**单机版的点餐软件**：用户打开程序后登录，浏览菜单，把菜加进购物车，享受会员折扣，结算后拿到一个取餐号去排队。所有数据（菜单、用户、评论、订单历史）都存在几个 **txt 文本文件**里，程序启动时读进内存，需要时再写回去。
+这是一个**单机版的点餐软件**：用户打开程序后登录，浏览菜单，把菜加进购物车，享受会员折扣，结算后拿到一个取餐号去排队，叫到号点「取餐」时还能给这顿饭打分评价。所有数据（菜单、用户、评论、订单历史）都存在几个 **txt 文本文件**里，程序启动时读进内存，需要时再写回去。
 
 它没有联网、没有数据库、没有服务器，**全部跑在你自己的电脑上**。你可以把它理解成「美团 App 的点餐部分，但是数据存在记事本里」。
 
@@ -402,21 +402,22 @@ double OrderService::checkout() {
 
 > 需求：可以评价点过的餐，且能按评价高低、留言先后排序显示。
 
-**写评价**：
+**写评价**（在「取餐」时，不再是结账后立刻弹）：
 
-- 结账后弹出 `CheckoutDialog`，包含菜品标签、五星评分（点击星星打分）、可选文字评价。
+- 结账后只拿到取餐号并跳到排队页；等在排队页点了「取餐」按钮，才弹出 `CheckoutDialog`，包含菜品标签、五星评分（点击星星打分）、可选文字评价。
 - 用户打星后点「提交」→ `FileManager::AddCommentAndUpdateMenu()` 将评论写入 `comment.txt`，同时更新 `menu.txt` 中菜品的平均分和评论数。
-- `CommentService::AddComment()` 同步更新内存中的评分排名索引。点「跳过」则不写。
+- `CommentService::AddComment()` 同步更新内存中的评论。点「跳过」则不写。
 
 **看评价 + 排序**：
 
 - `DishCard` 的「查看评论 ›」打开 `CommentDialog`，顶部展示**平均分 + 五星分布条**。
-- 标题栏右侧有下拉框 **[按时间排序 ▾ / 按评分排序 ▾]**，切换后评论区即时重排——按时间最新在前，按评分高分在前。
+- 标题栏右侧有下拉框 **[按时间排序 ▾ / 好评优先 ▾ / 差评优先 ▾]** 三选一，切换后评论区即时重排。
+- **三种排序统一在 `CommentService::getComment(模式)` 里实现**（`"time"` / `"rate_high"` / `"rate_low"`），弹窗只负责调用它取结果，不再自己写排序——逻辑只有一处。
 - 每条评论卡片：彩色头像圆、用户名、星级、时间、正文。
 
 **底层支持**：
 
-- `CommentService`（`comment/src/comment_service.cpp`）已编入程序，维护全量评论的时间序和评分序索引，提供 `getComment()`、`getDishComments()`、`getBest5Dishs()` 等接口。
+- `CommentService`（`comment/src/comment_service.cpp`）已编入程序，启动时被喂入全量评论，提供 `getComment()`（评论弹窗的排序就走它）、`getDishComments()`、`getBest5Dishs()` 等接口。
 
 ### 功能四：推荐点餐（销量 / 评分 Top5）✅ 已完成
 
@@ -449,10 +450,12 @@ for (int i = 0; i < qMin(5, copy.size()); i++)
 - **核心类**：`QueueService`（`queue/src/queue_service.cpp`），内部维护两条队列：
   - `waiting_`（预约排队）：下单后在这里等着被叫号。
   - `taking_`（取餐排队）：被叫到号、可以取餐的。
-- **下单入队**：结算成功后，主窗口调用 `m_queueService.in_queue(...)` 把订单加入 `waiting_`，并返回一个**取餐号**（从 1001 开始递增），结算成功的弹窗里会告诉用户这个号。
-- **叫号前进**：`advance_queue()` 把 `waiting_` 队首的人移到 `taking_`，当前叫号数 +1。叫号由 `QTimer::singleShot` 在 5~20 秒随机间隔后自动触发，全程主线程运行，无需人工干预。
-- **界面**：`QueuePage`（美团风格）顶部显示「当前叫号」大数字，下面分左右两栏——左「预约排队中」、右「待取餐」，**自己的号会高亮成橙色**，还会显示「前面还有 N 桌」。底部有「刷新进度」「返回菜单」按钮。
-- 页面和后端通过信号解耦：`QueuePage` 只发 `refreshRequested / backToMenuRequested` 信号，真正操作 `QueueService` 的逻辑在主窗口里。
+- **下单入队**：结算成功后，主窗口调用 `m_queueService.in_queue(...)` 把订单加入 `waiting_`，返回一个**取餐号**（从 1001 开始递增），用弹窗告诉用户，并直接跳到排队页。
+- **叫号前进**：`advance_queue()` 把 `waiting_` 队首的人移到 `taking_`，当前叫号数 +1。叫号由 `QTimer::singleShot` 在 5~20 秒随机间隔后自动触发，无需人工干预。
+- **取餐出队**：右侧「待取餐」里每张票是一个「**取餐**」按钮。点击后 `QueuePage` 发 `pickupRequested(取餐号)`，主窗口 `onPickup()` 弹出评价窗（见功能三），再调 `QueueService::take_meal(取餐号)` 把它移出 `taking_`，该号状态变「已取餐」。
+- **界面**：`QueuePage`（美团风格）顶部显示「当前叫号」大数字，下面分左右两栏——左「预约排队中」、右「待取餐」，**自己的号会高亮成橙色**，还会显示「前面还有 N 桌 / 已取餐」。底部只有「返回菜单」。
+- **进度自动刷新**，无需手动按钮：切到排队页时（`switchPage(4)`）、每次定时自动叫号后、点「取餐」后，主窗口都会调用 `refreshQueuePage()` 重画一次。
+- 页面和后端通过信号解耦：`QueuePage` 只发 `backToMenuRequested / pickupRequested` 信号，真正操作 `QueueService` 的逻辑在主窗口里。
 
 > 小提醒：当前排队是**内存态**的——关掉程序就清空，也不会读取 `queue.txt`。如需「关掉再打开还能看到进度」，需要接上 `FileManager` 的 `LoadQueue/SaveQueue` 做持久化（见第 10 节）。
 
@@ -529,7 +532,7 @@ m_orderService->addDish(d);
 |---|---|---|
 | **排队持久化** | 排队是内存态，关程序就清空，不读 `queue.txt` | 用 `FileManager::LoadQueue/SaveQueue` 在启动时载入、变动时写回 |
 | **`addUser` 写入格式** | `FileManager::addUser` 把会员等级写成了整数 `0`，且没写总消费字段 | 改成写字符串 `"REGULAR"` 并补上 `total_spent`（如 `0`） |
-| **导航栏里的历史订单按钮** | `order_system.cpp` 里建了一个隐藏的 `historyOrderBtn` 没用上 | 真正入口是购物车空状态的按钮；这个可以删掉以免混淆 |
+| **好评榜推荐未走 CommentService** | 评论排序已统一走 `CommentService::getComment`；但好评 Top5 推荐仍由 `FileManager` 预排，`getBest5Dishs` 暂未被界面调用 | 把好评榜推荐也改为走 `getBest5Dishs` |
 | **菜名/描述不能含空格** | menu.txt 用空格分隔字段，菜名带空格会解析错位 | 约定不带空格，或改用其他分隔符 |
 
 ---
