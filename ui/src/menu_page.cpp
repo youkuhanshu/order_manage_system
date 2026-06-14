@@ -5,6 +5,14 @@
 #include <QHBoxLayout>
 #include <QScrollArea>
 #include <QStyle>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QDateTime>
+
+// ---- DeepSeek API 配置 ----
+const QString DEEPSEEK_API_KEY = "sk-3f77a42174714886b17756b869fee34a";  // TODO: 填入你的 API Key
+const QString DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
 
 MenuPage::MenuPage(QWidget *parent) : QWidget(parent)
 {
@@ -39,9 +47,9 @@ void MenuPage::setupUI()
 
     pageLayout->addWidget(m_categoryList);
 
-    // ---- 右侧容器（推荐栏 + 滚动区）----
+    // 右侧容器（推荐栏 + 滚动区）
     auto *rightContainer = new QWidget(this);
-    auto *rightLayout    = new QVBoxLayout(rightContainer);
+    auto *rightLayout = new QVBoxLayout(rightContainer);
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(0);
 
@@ -81,21 +89,57 @@ void MenuPage::setupUI()
     m_mostCommented->setStyleSheet(recBtnStyle);
     m_mostCommented->setCursor(Qt::PointingHandCursor);
 
+    m_smartRecommend = new QPushButton("智能推荐", m_recommendBar);
+    m_smartRecommend->setStyleSheet(recBtnStyle);
+    m_smartRecommend->setCursor(Qt::PointingHandCursor);
+
     barLayout->addWidget(m_mostSaled);
     barLayout->addWidget(m_highScore);
     barLayout->addWidget(m_mostCommented);
+    barLayout->addWidget(m_smartRecommend);
     barLayout->addStretch();
 
-    connect(m_mostSaled,     &QPushButton::clicked, this, [this]() { switchRecommendMethod(0); });
-    connect(m_highScore,     &QPushButton::clicked, this, [this]() { switchRecommendMethod(1); });
+    connect(m_mostSaled, &QPushButton::clicked, this, [this]() { switchRecommendMethod(0); });
+    connect(m_highScore, &QPushButton::clicked, this, [this]() { switchRecommendMethod(1); });
     connect(m_mostCommented, &QPushButton::clicked, this, [this]() { switchRecommendMethod(2); });
+    connect(m_smartRecommend, &QPushButton::clicked, this, [this]() { switchRecommendMethod(3); });
 
     rightLayout->addWidget(m_recommendBar);
 
+    // AI 推荐回复区域（默认隐藏）
+    m_aiResponseContainer = new QWidget(rightContainer);
+    m_aiResponseContainer->setVisible(false);
+    auto *aiLayout = new QVBoxLayout(m_aiResponseContainer);
+    aiLayout->setContentsMargins(16, 12, 16, 12);
+    aiLayout->setSpacing(8);
+
+    m_aiLoadingLabel = new QLabel("正在请求 DeepSeek 智能推荐...", m_aiResponseContainer);
+    m_aiLoadingLabel->setAlignment(Qt::AlignCenter);
+    m_aiLoadingLabel->setStyleSheet(
+        "font-size: 14px; color: #0085FF; padding: 40px;"
+        "border: none; background: transparent;");
+    m_aiLoadingLabel->setVisible(false);
+    aiLayout->addWidget(m_aiLoadingLabel);
+
+    m_aiResponseText = new QTextEdit(m_aiResponseContainer);
+    m_aiResponseText->setReadOnly(true);
+    m_aiResponseText->setStyleSheet(R"(
+        QTextEdit {
+            background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 10px;
+            font-size: 14px; color: #333333; padding: 12px;
+        }
+    )");
+    m_aiResponseText->setVisible(false);
+    aiLayout->addWidget(m_aiResponseText, 1);
+
+    m_networkManager = new QNetworkAccessManager(this);
+
+    rightLayout->addWidget(m_aiResponseContainer, 1);
+
     // 菜品滚动区
-    auto *scrollArea = new QScrollArea(rightContainer);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setStyleSheet(R"(
+    m_dishScrollArea = new QScrollArea(rightContainer);
+    m_dishScrollArea->setWidgetResizable(true);
+    m_dishScrollArea->setStyleSheet(R"(
         QScrollArea { background: #F5F5F5; border: none; }
         QScrollBar:vertical { width: 6px; background: transparent; }
         QScrollBar::handle:vertical {
@@ -112,8 +156,8 @@ void MenuPage::setupUI()
     m_dishListLayout->setSpacing(10);
     m_dishListLayout->addStretch();
 
-    scrollArea->setWidget(m_dishContainer);
-    rightLayout->addWidget(scrollArea, 1);
+    m_dishScrollArea->setWidget(m_dishContainer);
+    rightLayout->addWidget(m_dishScrollArea, 1);
 
     pageLayout->addWidget(rightContainer, 1);
 }
@@ -124,9 +168,9 @@ void MenuPage::setData(const QList<Dish_qt> &allItems,
                        const QList<Dish_qt> &byComments,
                        const QStringList    &categories)
 {
-    m_allItems  = allItems;
-    m_bySales   = bySales;
-    m_byRating  = byRating;
+    m_allItems = allItems;
+    m_bySales = bySales;
+    m_byRating = byRating;
     m_byComments = byComments;
 
     // 重建分类列表，暂停信号避免触发 refreshDishList
@@ -163,24 +207,28 @@ void MenuPage::onCategoryChanged(int row)
 void MenuPage::switchRecommendMethod(int index)
 {
     switch (index) {
-        case 0: 
-            m_recommendMethod = "销量最高"; 
+        case 0:
+            m_recommendMethod = "销量最高";
             break;
-        case 1: 
-            m_recommendMethod = "评分最高"; 
+        case 1:
+            m_recommendMethod = "评分最高";
             break;
-        case 2: 
-            m_recommendMethod = "最多评价"; 
+        case 2:
+            m_recommendMethod = "最多评价";
             break;
-        default: 
+        case 3:
+            m_recommendMethod = "智能推荐";
+            break;
+        default:
             break;
     }
 
     m_mostSaled->setProperty("active", index == 0);
     m_highScore->setProperty("active", index == 1);
     m_mostCommented->setProperty("active", index == 2);
+    m_smartRecommend->setProperty("active", index == 3);
 
-    for (auto *btn : {m_mostSaled, m_highScore, m_mostCommented}) {
+    for (auto *btn : {m_mostSaled, m_highScore, m_mostCommented, m_smartRecommend}) {
         btn->style()->unpolish(btn);
         btn->style()->polish(btn);
     }
@@ -240,8 +288,15 @@ void MenuPage::refreshDishList(const QString &category)
         else if (m_recommendMethod == "最多评价") {
             recommend_dishes = m_byComments;
         }
+        else if (m_recommendMethod == "智能推荐") {
+            m_dishScrollArea->setVisible(false); // 隐藏菜品卡片
+            onSmartRecommend();
+            return;  // 不执行后续 makeCard / emit
+        }
+        m_dishScrollArea->setVisible(true);
+        hideAIResponse();
         for (const auto &item : recommend_dishes) makeCard(item);
-    } 
+    }
     else {
         for (const auto &item : m_allItems) {
             if (item.category == category || category == "全部")
@@ -251,4 +306,147 @@ void MenuPage::refreshDishList(const QString &category)
 
     m_dishListLayout->addStretch();
     emit dishCountChanged(count);
+}
+
+//  发起智能推荐请求
+void MenuPage::onSmartRecommend()
+{
+    // 显示 loading
+    m_aiResponseContainer->setVisible(true);
+    m_aiLoadingLabel->setVisible(true);
+    m_aiResponseText->setVisible(false);
+
+    // 官方请求示例：
+    /*
+       curl https://api.deepseek.com/chat/completions \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer ${DEEPSEEK_API_KEY}" \
+        -d '{
+                "model": "deepseek-v4-pro",
+                "messages": [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": "Hello!"}
+                ],
+                "thinking": {"type": "enabled"},
+                "reasoning_effort": "high",
+                "stream": false
+            }'
+    */
+
+    // 构造请求
+    QNetworkRequest request{QUrl(DEEPSEEK_API_URL)}; // deepseek base_url
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", ("Bearer " + DEEPSEEK_API_KEY).toUtf8());
+
+    // 请求头
+    QJsonObject body; 
+    body["model"] = "deepseek-chat"; // 模型
+
+    QJsonObject think;
+    think["type"] = "disabled"; // 非思考模式
+    body["thinking"] = think;
+
+    body["reasoning_effort"] = "low"; // 不需要思考很多
+    body["stream"] = false; // 单次对话
+    body["max_tokens"] = 1024; // 最多回复1024个token，太多了显示不下
+
+    // 具体发送的文字内容
+    QJsonArray messages;
+
+    QJsonObject systemMsg;
+    systemMsg["role"] = "system";
+    systemMsg["content"] = "你是一个专业的美食推荐助手。你会根据当前时间、季节和天气因素，从菜单中挑选最适合的菜品推荐给顾客。回复简洁亲切";
+    messages.append(systemMsg);
+
+    QJsonObject userMsg;
+    userMsg["role"] = "user";
+    userMsg["content"] = buildPrompt();
+    messages.append(userMsg);
+
+    body["messages"] = messages;
+
+    // POST 请求：把 JSON 正文贴到 DeepSeek 服务器
+    // request  = 信封（URL + 请求头 + API Key）
+    // QJsonDocument(body).toJson() = 把 body 压缩成 JSON 字节串作为正文
+    // reply = 回执单，此时请求已发出，但回复还没到
+    QNetworkReply *reply = m_networkManager->post(request, QJsonDocument(body).toJson());
+
+    // 绑定回调：当服务器回复到达（或超时/断网）时，自动执行 {} 里的代码
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+
+        reply->deleteLater(); // 标记 reply 待删除，等事件循环跑完这一轮再安全释放内存
+
+        // 检查网络错误（断网、服务器挂了、API Key 无效等）
+        if (reply->error() != QNetworkReply::NoError) {
+            showAIResponse(QString("网络请求失败：%1").arg(reply->errorString()));
+            return;
+        }
+
+        // 读取服务器返回的原始字节，解析为 JSON 文档
+        QByteArray data = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+
+        // 从 JSON 中取出 choices 数组（通常只有 1 个元素）
+        QJsonArray choices = doc.object()["choices"].toArray();
+        if (choices.isEmpty()) {
+            showAIResponse("DeepSeek 未返回任何推荐内容。");
+            return;
+        }
+
+        // 层层剥取：choices[0] → message → content（即推荐文字）
+        QString content = choices[0].toObject()["message"].toObject()["content"].toString();
+        if (content.isEmpty()) {
+            showAIResponse("DeepSeek 返回内容为空，请稍后重试。");
+            return;
+        }
+
+        // ⑤ 把推荐文字显示到界面上
+        showAIResponse(content);
+    });
+}
+
+//  组装固定提示词（菜单数据 + 时间 + 地点）
+QString MenuPage::buildPrompt()
+{
+    QDateTime now = QDateTime::currentDateTime();
+    QString timeInfo = QString("地点：长沙\n当前时间：%1\n星期：%2")
+        .arg(now.toString("yyyy年M月d日 HH:mm"))
+        .arg(now.toString("dddd"));
+
+    QString menu;
+    for (const auto &dish : m_allItems) {
+        menu += QString("%1 %2 %3 %4 %5\n")
+            .arg(dish.name)
+            .arg(dish.price)
+            .arg(dish.description)
+            .arg(dish.rating)
+            .arg(dish.category);
+    }
+
+    return QString(
+        "请根据以下信息为顾客推荐3-5道最适合当前享用的菜品：\n\n"
+        "%1\n\n完整菜单：\n%3\n\n"
+        "要求：\n"
+        "1. 菜单格式为：菜名 价格 描述 销量 评分 类型\n"
+        "2. 综合考虑当前时间、季节以及长沙当地的天气因素\n"
+        "3. 推荐3-5道菜品，每道菜品单独一行\n"
+        "4. 格式：菜名 - 推荐理由（简洁一句话）")
+        .arg(timeInfo)
+        .arg(menu);
+}
+
+//  显示 AI 推荐结果
+void MenuPage::showAIResponse(const QString &text)
+{
+    m_aiLoadingLabel->setVisible(false);
+    m_aiResponseText->setPlainText(text);
+    m_aiResponseText->setVisible(true);
+}
+
+//  隐藏 AI 区域
+void MenuPage::hideAIResponse()
+{
+    m_aiResponseContainer->setVisible(false);
+    m_aiLoadingLabel->setVisible(false);
+    m_aiResponseText->setVisible(false);
 }

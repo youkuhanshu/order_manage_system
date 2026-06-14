@@ -7,6 +7,9 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QFrame>
+#include <QTextEdit>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include "FileManager.h"
 
 // 菜单页
@@ -42,6 +45,10 @@ private slots:
 private:
     void setupUI();
     void refreshDishList(const QString &category);
+    void onSmartRecommend();               // 发起智能推荐请求
+    QString buildPrompt();            // 组装固定提示词
+    void showAIResponse(const QString &text); // 显示 AI 结果
+    void hideAIResponse();                 // 隐藏 AI 区域
 
     // 数据
     QList<Dish_qt> m_allItems;
@@ -57,6 +64,14 @@ private:
     QPushButton *m_mostSaled;
     QPushButton *m_highScore;
     QPushButton *m_mostCommented;
+    QPushButton *m_smartRecommend;       // "智能推荐"按钮
+    QScrollArea *m_dishScrollArea;       // 菜品卡片滚动区
     QWidget *m_dishContainer;
     QVBoxLayout *m_dishListLayout;
+
+    // AI 推荐区域
+    QWidget *m_aiResponseContainer;      // AI 回复区域容器
+    QLabel *m_aiLoadingLabel;            // "正在请求智能推荐..."
+    QTextEdit *m_aiResponseText;         // AI 回复纯文本（只读）
+    QNetworkAccessManager *m_networkManager; // HTTP 客户端
 };
