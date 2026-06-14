@@ -340,7 +340,7 @@ void MenuPage::onSmartRecommend()
 
     // 请求头
     QJsonObject body; 
-    body["model"] = "deepseek-chat"; // 模型
+    body["model"] = "deepseek-v4-flash"; // 模型
 
     QJsonObject think;
     think["type"] = "disabled"; // 非思考模式
