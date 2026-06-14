@@ -89,22 +89,6 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
             background: #FFFFFF; border: 1px solid #E0E0E0;
             selection-background-color: #EAF4FF; selection-color: #0085FF;
             font-size: 12px; color: #666666;
-<<<<<<< HEAD
-=======
-        }
-    )");
-    connect(m_sortCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &CommentDialog::onSortChanged);
-    titleLayout->addWidget(m_sortCombo);
-
-    auto *closeBtn = new QPushButton("✕", titleBar);
-    closeBtn->setFixedSize(28, 28);
-    closeBtn->setCursor(Qt::PointingHandCursor);
-    closeBtn->setStyleSheet(R"(
-        QPushButton {
-            background: transparent; border: none;
-            font-size: 14px; color: #AAAAAA; border-radius: 14px;
->>>>>>> 929277828bb293c0d1adb11e36f0a1cd43c54026
         }
     )");
     connect(m_sortCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),

@@ -18,11 +18,7 @@ class QueuePage : public QWidget
 public:
     explicit QueuePage(QWidget *parent = nullptr);
 
-<<<<<<< HEAD
     /// 刷新排队显示，切换到本页 / 自动叫号 / 取餐后由主窗口调用
-=======
-    /// 刷新排队显示，切换到本页或点刷新时调用
->>>>>>> 929277828bb293c0d1adb11e36f0a1cd43c54026
     /// currentCall：当前叫到的号
     /// waiting：预约排队队列；taking：取餐排队队列
     /// myQueueId：当前用户自己的取餐号（没有则传 -1）
@@ -32,14 +28,8 @@ public:
                       int myQueueId);
 
 signals:
-<<<<<<< HEAD
     void backToMenuRequested();   ///< 返回菜单
     void pickupRequested(int queueId);  ///< 点「取餐」，传出该号
-=======
-    void refreshRequested();      ///< 点「刷新」
-    void backToMenuRequested();   ///< 返回菜单
-    void mealTakenRequested(int queueId); ///< 点「请取餐」，触发评价
->>>>>>> 929277828bb293c0d1adb11e36f0a1cd43c54026
 
 private:
     void setupUI();
