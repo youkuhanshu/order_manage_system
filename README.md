@@ -274,7 +274,7 @@ list(APPEND srcs ${CMAKE_CURRENT_SOURCE_DIR}/../comment/src/comment_service.cpp)
 
 ## 6. 数据文件格式详解
 
-所有文件都在 `storage/data/`。程序运行时的「当前目录」是 `build/`，所以代码里用相对路径 `../storage/data/xxx.txt` 访问它们。规则统一：**以 `#` 开头的行是注释，会被跳过；空行也跳过。**
+所有文件都在 `storage/data/`。程序用相对路径 `storage/data/xxx.txt` 访问（`FileManager` 中硬编码），所以**必须从项目根目录运行 exe**，或将 `storage/` 目录复制到 exe 旁。规则统一：**以 `#` 开头的行是注释，会被跳过；空行也跳过。**
 
 ### 6.1 menu.txt（菜单）
 
@@ -543,8 +543,9 @@ m_orderService->addDish(d);
 | **AI 推荐的 API Key 硬编码在源码** | `menu_page.cpp` 顶部直接写死了 DeepSeek 的 API Key；且必须联网、Key 有效才能用 | 把 Key 移到配置文件/环境变量，不要提交到公开仓库；离线/失败时已有「网络请求失败」提示 |
 | **排队持久化** | 排队是内存态，关程序就清空，不读 `queue.txt` | 用 `FileManager::LoadQueue/SaveQueue` 在启动时载入、变动时写回 |
 | **`addUser` 写入格式** | `FileManager::addUser` 把会员等级写成了整数 `0`，且没写总消费字段 | 改成写字符串 `"REGULAR"` 并补上 `total_spent`（如 `0`） |
-| **好评榜推荐未走 CommentService** | 评论排序、评分更新已走 `CommentService`；但好评 Top5 推荐仍由 `FileManager` 预排，`getBest5Dishs` 暂未被界面调用 | 把好评榜推荐也改为走 `getBest5Dishs` |
+| **好评榜推荐未走 CommentService** | 评论浏览/排序/均分已全部复用 `CommentService`；但好评 Top5 推荐仍由 `FileManager` 读 `menu.txt` 的静态 `rating` 字段排序 | 改用 `getBest5Dishs()`，需要给 `DishComment_msg` 加 `dish_id` 字段以映射回 `Dish_qt` |
 | **菜名/描述不能含空格** | menu.txt 用空格分隔字段，菜名带空格会解析错位 | 约定不带空格，或改用其他分隔符 |
+| **排队时间文字冻结** | `QueuePage` 已加 `QTimer` 每 30s 自刷新，时间可自动更新 | ✅ 已修复 |
 
 ---
 
@@ -620,11 +621,10 @@ copy ..\storage\data\history_order.txt storage\data\
 ### 第四步：打包成 zip
 
 ```powershell
-# 回到项目根目录
-cd ..
+# 仍在 build/ 下，直接打包当前目录内容（不加 build\ 前缀，保证 zip 内路径正确）
+powershell -Command "Compress-Archive -Path order_system.exe,Qt6Core.dll,Qt6Gui.dll,Qt6Network.dll,Qt6Svg.dll,Qt6Widgets.dll,libgcc_s_seh-1.dll,libstdc++-6.dll,libwinpthread-1.dll,opengl32sw.dll,D3Dcompiler_47.dll,generic,iconengines,imageformats,networkinformation,platforms,styles,tls,translations,storage -DestinationPath ..\order_system_portable.zip -Force"
 
-# 用 PowerShell 打包（排除编译中间文件）
-powershell -Command "Compress-Archive -Path build\order_system.exe,build\Qt6Core.dll,build\Qt6Gui.dll,build\Qt6Network.dll,build\Qt6Svg.dll,build\Qt6Widgets.dll,build\libgcc_s_seh-1.dll,build\libstdc++-6.dll,build\libwinpthread-1.dll,build\opengl32sw.dll,build\D3Dcompiler_47.dll,build\generic,build\iconengines,build\imageformats,build\networkinformation,build\platforms,build\styles,build\tls,build\translations,build\storage -DestinationPath order_system_portable.zip -Force"
+cd ..
 ```
 
 生成的 `order_system_portable.zip`（约 26MB）就是可以分发的便携包。
@@ -661,11 +661,10 @@ copy ..\storage\data\queue.txt         storage\data\
 copy ..\storage\data\comment.txt       storage\data\
 copy ..\storage\data\history_order.txt storage\data\
 
-cd ..
-
 # 打包
-powershell -Command "Compress-Archive -Path build\order_system.exe,build\Qt6Core.dll,build\Qt6Gui.dll,build\Qt6Network.dll,build\Qt6Svg.dll,build\Qt6Widgets.dll,build\libgcc_s_seh-1.dll,build\libstdc++-6.dll,build\libwinpthread-1.dll,build\opengl32sw.dll,build\D3Dcompiler_47.dll,build\generic,build\iconengines,build\imageformats,build\networkinformation,build\platforms,build\styles,build\tls,build\translations,build\storage -DestinationPath order_system_portable.zip -Force"
+powershell -Command "Compress-Archive -Path order_system.exe,Qt6Core.dll,Qt6Gui.dll,Qt6Network.dll,Qt6Svg.dll,Qt6Widgets.dll,libgcc_s_seh-1.dll,libstdc++-6.dll,libwinpthread-1.dll,opengl32sw.dll,D3Dcompiler_47.dll,generic,iconengines,imageformats,networkinformation,platforms,styles,tls,translations,storage -DestinationPath ..\order_system_portable.zip -Force"
 
+cd ..
 Write-Host "✓ 打包完成: order_system_portable.zip" -ForegroundColor Green
 ```
 
