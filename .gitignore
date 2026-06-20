@@ -4,6 +4,7 @@ build/
 requirement.md
 book_arrangement/
 CMakeLists.txt
+cmate.md
 # 编译产物
 *.o
 *.exe

@@ -18,8 +18,8 @@
 
 /// 一笔“已下单、待取餐”的订单信息，取餐时用来弹评价窗
 struct PendingReview {
-    QStringList dishNames;   // 本单菜品名（去重，用于展示）
-    QList<int>  dishIds;     // 对应菜品 ID（用于构建评论）
+    QStringList dishNames;   // 本单菜品名列表
+    QList<int>  dishIds;     // 对应菜品 ID
     double      total  = 0.0; // 实付金额
     int         userId = 0;   // 下单用户 ID
 };
@@ -44,6 +44,7 @@ private:
     void scheduleAutoAdvance(); // 用随机间隔调度下一次自动叫号
     void onAutoAdvance();       // 定时器到期：执行叫号并调度下一次
     void onPickup(int queueId); // 顾客点「取餐」：弹评价窗 + 出队
+    void openCommentDialog(int dishId); // 浏览菜品评论：查 dish + 从 CommentService 取评论 + 创建 CommentDialog
     bool m_autoAdvancePending = false; // 防止重复调度
     User u;
 
@@ -72,7 +73,7 @@ private:
     OrderService *m_orderService = nullptr;
 
     // 排队
-    QueueService m_queueService;     // 复用后端排队逻辑
+    QueueService m_queueService;     
 
     // 评论排序
     CommentService m_commentService; // 评论排序与推荐

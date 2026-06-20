@@ -1,6 +1,5 @@
 #include "menu_page.h"
 #include "dish_card.h"
-#include "comment_dialog.h"
 
 #include <QHBoxLayout>
 #include <QScrollArea>
@@ -265,13 +264,7 @@ void MenuPage::refreshDishList(const QString &category)
         auto *card = new DishCard(dish, m_discountRate, salesRank, ratingRank, m_dishContainer);
         connect(card, &DishCard::addClicked, this, [this](int id) { emit addDishClicked(id); });
         connect(card, &DishCard::commentClicked, this, [this](int dishId) {
-            for (const auto &d : m_allItems) {
-                if (d.id == dishId) {
-                    CommentDialog dlg(d, this);
-                    dlg.exec();
-                    return;
-                }
-            }
+            emit viewCommentsRequested(dishId);
         });
         m_dishListLayout->addWidget(card);
         ++count;

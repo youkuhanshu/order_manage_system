@@ -72,7 +72,7 @@ double OrderService::getDiscountRate(const User& user) {
 
 void OrderService::updateUser(const User& user_, const std::vector<Dish>& order_, double total_price_) {
     // ---- 1) 写入 history_order.txt：用户名 + 本次订单菜名（空格分隔）----
-    const std::string history_path = "../storage/data/history_order.txt";
+    const std::string history_path = "storage/data/history_order.txt";
     {
         std::ostringstream order_line;
         order_line << user_.name;

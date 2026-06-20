@@ -15,13 +15,7 @@ class CheckoutDialog : public QDialog
     Q_OBJECT
 
 public:
-    /// @param dishNames  本次结算的菜品名称（去重，用于展示）
-    /// @param dishIds    对应的菜品 ID（用于构建 CommentMsg）
-    /// @param total      实付金额
-    /// @param queueId    取餐号
-    /// @param userId     当前用户 ID
-    /// @param parent
-    explicit CheckoutDialog(const QStringList &dishNames,
+    explicit CheckoutDialog(const QStringList &dishNames,           // 构造结算评价弹窗：传入菜品名列表、菜品ID列表、金额、取餐号、用户ID
                             const QList<int>   &dishIds,
                             double              total,
                             int                 queueId,
@@ -29,14 +23,14 @@ public:
                             QWidget            *parent = nullptr);
 
     /// 获取用户提交的评论（rating == 0 表示未评分，调用者应跳过）
-    CommentMsg getComment() const;
+    CommentMsg getComment() const;                                  // 构造并返回CommentMsg对象（含用户ID、菜品ID列表、评论内容、评分、当前时间戳）
 
 private slots:
-    void onStarClicked(int star);
+    void onStarClicked(int star);                                   // 点击星级按钮：设置/取消评分（再次点击同一星可取消），更新提交按钮状态
 
 private:
-    void setupUI();
-    void updateStars();
+    void setupUI();                                                 // 构建弹窗整体布局：顶部金额卡片、中间菜品标签+星级+评论输入、底部按钮
+    void updateStars();                                             // 根据当前m_rating刷新五颗星按钮的亮/暗样式
 
     // 数据
     QStringList m_dishNames;
