@@ -14,3 +14,4 @@ CLAUDE.md
 build_test/
 
 doc/
+secrets_backup.local.txt
