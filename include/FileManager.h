@@ -108,6 +108,7 @@ private:
     const std::string QUEUE_FILE_PATH = "../storage/data/queue.txt";
     const std::string COMMENT_FILE_PATH = "../storage/data/comment.txt";
     const std::string USER_FILE_PATH = "../storage/data/users.txt";
+    const std::string HISTORY_ORDER_FILE_PATH = "../storage/data/history_order.txt";
 
     static std::vector<Dish> all_dishes_cpp;
     static QList<Dish_qt> all_dishes_qt;
@@ -134,6 +135,9 @@ public:
     void LoadUsers();
     static std::vector<User> getUsers_cpp();
     void addUser(int id, std::string name, std::string password);
+    void SaveUser(const User& user);
+    std::vector<std::vector<Dish>> LoadUserHistoryOrders(const User& user) const;
+    void SaveCheckout(const User& user, const std::vector<Dish>& order);
 
     // 排队
     void LoadQueue();

@@ -6,7 +6,7 @@
 #include <functional>
 
 using QueueCallback = std::function<void(const std::string& type,const void* data)>;
-#define time_threshold 6000 //单位是秒
+#define time_threshold 10 //单位是秒
 
 class QueueService{
 private:

@@ -1,47 +1,11 @@
 #include "Order_mgr.hpp"
 
 #include <algorithm>
-#include <fstream>
-#include <unordered_map>
-#include <sstream>
-
-std::vector<std::vector<Dish>> OrderService::loadUserHistoryOrders(const User& user, const std::string& history_path) {
-    std::ifstream infile(history_path);
-    if (!infile.is_open()) {
-        std::cerr << "Failed to open " << history_path << std::endl;
-        return {};
-    }
-
-    std::vector<std::vector<Dish>> orders;
-    std::string line;
-    while (std::getline(infile, line)) {
-        std::vector<Dish> order;
-
-        if (line.empty() || (!line.empty() && line[0] == '#')) continue;
-
-        std::istringstream iss(line);
-        std::string name;
-        if (!(iss >> name)) continue;
-        if (name != user.name) continue;
-
-        std::string dish;
-        while (iss >> dish) {
-            // Dish 目前是 plain struct（无接收 std::string 的构造函数），这里先只填菜名
-            Dish d{};
-            d.name = dish;
-            order.push_back(d);
-        }
-        orders.push_back(order);
-    }
-    return orders;
-}
 
 void OrderService::addDish(const Dish& dish) {
     order_.push_back(dish);
-    //这里尚不知道怎么在ui界面中调用这个函数来加菜，（应当要多次例如在ui中点击加菜按钮时调用填充进order_里）
 }
 
-// std::remove 要比较两个 Dish 是否相等，但是Dish本身并没有==运算符
 void OrderService::removeDish(const Dish& dish) {
     order_.erase(std::remove(order_.begin(), order_.end(), dish), order_.end());
 }
@@ -55,154 +19,38 @@ double OrderService::calcCart() {
 }
 
 double OrderService::getDiscountRate(const User& user) {
-    if (user.level == "REGULAR") {
-        return 1.0;
-    }
-    else if (user.level == "SILVER") {
+    if (user.level == "SILVER") {
         return 0.95;
     }
-    else if (user.level == "GOLD") {
+    if (user.level == "GOLD") {
         return 0.85;
     }
-    else if (user.level == "PLATINUM") {
+    if (user.level == "PLATINUM") {
         return 0.75;
     }
     return 1.0;
 }
 
-void OrderService::updateUser(const User& user_, const std::vector<Dish>& order_, double total_price_) {
-    // ---- 1) 写入 history_order.txt：用户名 + 本次订单菜名（空格分隔）----
-    const std::string history_path = "../storage/data/history_order.txt";
-    {
-        std::ostringstream order_line;
-        order_line << user_.name;
-        for (const auto& dish : order_) {
-            order_line << " " << dish.name;
-        }
-
-        std::ofstream outfile(history_path, std::ios::app);
-        if (!outfile.is_open()) {
-            std::cerr << "Failed to open " << history_path << " for writing" << std::endl;
-            return;
-        }
-        outfile << order_line.str() << "\n";
-    }
-
-    // ---- 2) 更新 menu.txt：order_ 中出现的菜名销量 +1（重复出现要重复+1）----
-    const std::string menu_path = "../storage/data/menu.txt";
-    std::unordered_map<std::string, int> dish_counts;
-    for (const auto& dish : order_) {
-        dish_counts[dish.name] += 1;
-    }
-
-    {
-        std::ifstream in(menu_path);
-        if (!in.is_open()) {
-            std::cerr << "Failed to open " << menu_path << " for reading" << std::endl;
-            return;
-        }
-
-        std::vector<std::string> out_lines;
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line.empty() || (!line.empty() && line[0] == '#')) {
-                out_lines.push_back(line);
-                continue;
-            }
-
-            Dish d{};
-            std::stringstream ss(line);
-            // menu.txt: id 菜名 价格 描述 销量 平均得分 类型 评论个数
-            ss >> d.id >> d.name >> d.price >> d.description >> d.sales >> d.rating >> d.category >> d.comment_count;
-
-            auto it = dish_counts.find(d.name);
-            if (it != dish_counts.end()) {
-                d.sales += it->second;
-            }
-
-            std::ostringstream rebuilt;
-            rebuilt << d.id << " " << d.name << " " << d.price << " " << d.description << " "
-                    << d.sales << " " << d.rating << " " << d.category << " " << d.comment_count;
-            out_lines.push_back(rebuilt.str());
-        }
-        in.close();
-
-        std::ofstream out(menu_path, std::ios::trunc);
-        if (!out.is_open()) {
-            std::cerr << "Failed to open " << menu_path << " for writing" << std::endl;
-            return;
-        }
-        for (const auto& l : out_lines) {
-            out << l << "\n";
-        }
-    }
-
-    // ---- 3) 更新 users.txt：找到用户，更新会员等级，并把总消费加上 total_price_ ----
-    const std::string users_path = "../storage/data/users.txt";
-    {
-        std::ifstream in(users_path);
-        if (!in.is_open()) {
-            std::cerr << "Failed to open " << users_path << " for reading" << std::endl;
-            return;
-        }
-
-        std::vector<std::string> out_lines;
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line.empty() || (!line.empty() && line[0] == '#')) {
-                out_lines.push_back(line);
-                continue;
-            }
-
-            std::stringstream ss(line);
-            int id = 0;
-            std::string name;
-            std::string password;
-            std::string level;
-            double total_spent = 0.0;
-
-            if (!(ss >> id >> name >> password >> level)) {
-                out_lines.push_back(line);
-                continue;
-            }
-            if (!(ss >> total_spent)) {
-                total_spent = 0.0;
-            }
-
-            if (name == user_.name) {
-                total_spent += total_price_;
-
-                if (total_spent >= 10000.0) level = "PLATINUM";
-                else if (total_spent >= 5000.0) level = "GOLD";
-                else if (total_spent >= 1000.0) level = "SILVER";
-                else level = "REGULAR";
-            }
-
-            std::ostringstream rebuilt;
-            rebuilt << id << " " << name << " " << password << " " << level << " " << total_spent;
-            out_lines.push_back(rebuilt.str());
-        }
-        in.close();
-
-        std::ofstream out(users_path, std::ios::trunc);
-        if (!out.is_open()) {
-            std::cerr << "Failed to open " << users_path << " for writing" << std::endl;
-            return;
-        }
-        for (const auto& l : out_lines) {
-            out << l << "\n";
-        }
-    }
-}
-
-double OrderService::checkout() {
+double OrderService::checkout(FileManager& fileManager) {
     total_price_ = calcCart() * getDiscountRate(user_);
-    updateUser(user_, order_, total_price_);
+    user_.total_spent += total_price_;
+
+    if (user_.total_spent >= 10000.0) {
+        user_.level = "PLATINUM";
+    } else if (user_.total_spent >= 5000.0) {
+        user_.level = "GOLD";
+    } else if (user_.total_spent >= 1000.0) {
+        user_.level = "SILVER";
+    } else {
+        user_.level = "REGULAR";
+    }
+
+    fileManager.SaveCheckout(user_, order_);
     return total_price_;
 }
 
 void OrderService::removeOneDish(int dishId) {
-    for (auto it = order_.begin(); it != order_.end(); it++) {
+    for (auto it = order_.begin(); it != order_.end(); ++it) {
         if (it->id == dishId) {
             order_.erase(it);
             break;

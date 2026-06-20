@@ -1,5 +1,6 @@
 #include "order_system.h"
 #include "checkout_dialog.h"
+#include "comment_dialog.h"
 
 #include <QApplication>
 #include <QDialog>
@@ -80,8 +81,7 @@ void order_system::setupUI()
             return;
         }
 
-        auto historyOrders = OrderService::loadUserHistoryOrders(
-            m_currentUser, "../storage/data/history_order.txt");
+        auto historyOrders = m_fl.LoadUserHistoryOrders(m_currentUser);
 
         QList<QList<Dish_qt>> matchedOrders;
         QStringList displayLines;
@@ -225,6 +225,7 @@ void order_system::setupUI()
         }
     });
     connect(m_menuPage, &MenuPage::dishCountChanged, m_navBar, &NavBar::setDishCount);
+    connect(m_menuPage, &MenuPage::viewCommentsRequested, this, &order_system::openCommentDialog);
 
     // 购物车页 & 排队页
     m_cartPage  = new CartPage();
@@ -271,11 +272,18 @@ void order_system::setupUI()
         // 结算前保存订单快照（checkout 后会 clearOrder）
         QList<Dish_qt> orderedDishes = buildQtOrder();
 
-        double total = m_orderService->checkout();
+        double total = m_orderService->checkout(m_fl);
+        m_currentUser = m_orderService->getUser();
 
         // 从文件重新加载用户数据，同步最新的等级和消费
         m_fl.LoadUsers();
+        m_fl.LoadMenu();
         m_users = m_fl.getUsers_cpp();
+        m_allItems = m_fl.getMenu_qt();
+        m_categories = m_fl.getCategories_qt();
+        m_bySales = m_fl.getRecommendBySales();
+        m_byRating = m_fl.getRecommendByRating();
+        m_byComments = m_fl.getRecommendByComments();
         for (const auto &u : m_users) {
             if (u.name == m_currentUser.name) {
                 m_currentUser = u;
@@ -287,6 +295,7 @@ void order_system::setupUI()
         m_orderService->clearOrder();
         m_navBar->setUser(m_currentUser);
         m_navBar->setDishCount(0);
+        m_menuPage->setData(m_allItems, m_bySales, m_byRating, m_byComments, m_categories);
         m_menuPage->setDiscountRate(m_orderService->getDiscountRate(m_currentUser));
 
         // 结算后加入排队队列，拿到取餐号
@@ -461,5 +470,25 @@ void order_system::onPickup(int queueId)
     // 2) 取餐：把该号移出取餐队列，刷新排队显示
     m_queueService.take_meal(queueId);
     refreshQueuePage();
+}
+
+// 浏览菜品评论：查菜品 → 从 CommentService 取评论 → 注入依赖创建 CommentDialog
+void order_system::openCommentDialog(int dishId)
+{
+    // 1. 查找对应菜品
+    Dish_qt dish;
+    bool found = false;
+    for (const auto &d : m_allItems) {
+        if (d.id == dishId) { dish = d; found = true; break; }
+    }
+    if (!found) return;
+
+    // 2. 从 CommentService 获取该菜品按时间排序的评论（与之前行为一致：默认按时间）
+    const std::string idStr = std::to_string(dishId);
+    std::vector<CommentMsg> dishComments = m_commentService.getDishComments(idStr, "time");
+
+    // 3. 创建弹窗，注入全部依赖
+    CommentDialog dlg(dish, dishComments, m_users, &m_commentService, this);
+    dlg.exec();
 }
 

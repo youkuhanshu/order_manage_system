@@ -6,6 +6,7 @@
 #include <QScrollArea>
 #include <ctime>
 
+// 构造：保存订单数据到成员变量，调用setupUI构建界面
 CheckoutDialog::CheckoutDialog(const QStringList &dishNames, const QList<int> &dishIds, double total, int queueId, int userId, QWidget *parent)
     : QDialog(parent)
     , m_dishNames(dishNames)
@@ -17,6 +18,7 @@ CheckoutDialog::CheckoutDialog(const QStringList &dishNames, const QList<int> &d
     setupUI();
 }
 
+// 构建弹窗完整布局：顶部金额+取餐号卡片 → 中间菜品标签+星级评分+文字输入 → 底部跳过/提交按钮
 void CheckoutDialog::setupUI()
 {
     setWindowTitle("取餐成功");
@@ -136,6 +138,7 @@ void CheckoutDialog::setupUI()
         m_starBtns[i]->setCursor(Qt::PointingHandCursor);
         m_starBtns[i]->setStyleSheet(starUnchecked);
         const int star = i + 1;
+        //onStarClicked(star) 里这个 star 值是运行时动态变化的（1, 2, 3, 4, 5），不是编译期常量。connect 的 receiver → slot 绑定发生在编译/初始化时
         connect(m_starBtns[i], &QPushButton::clicked, this, [this, star]() {
             onStarClicked(star);
         });
@@ -228,6 +231,7 @@ void CheckoutDialog::setupUI()
     resize(480, 420);
 }
 
+// 处理星级点击：点击已选中星→取消评分(m_rating=0)，否则设为新评分；更新按钮启用状态
 void CheckoutDialog::onStarClicked(int star)
 {
     // 再次点击同一颗星 → 取消评分；否则设为新评分
@@ -238,9 +242,11 @@ void CheckoutDialog::onStarClicked(int star)
         m_rating = star;
     }
     updateStars();
+    // 动态地控制提交按钮是否可用
     m_submitBtn->setEnabled(m_rating > 0);
 }
 
+// 根据m_rating刷新五颗星按钮样式：已选星显示金色(#FFB800)，未选星显示灰色(#DDDDDD)
 void CheckoutDialog::updateStars()
 {
     for (int i = 0; i < 5; i++) {
@@ -265,6 +271,7 @@ void CheckoutDialog::updateStars()
     }
 }
 
+// 构造CommentMsg：将m_dishIds转为string向量，收集编辑框文本和评分
 CommentMsg CheckoutDialog::getComment() const
 {
     std::vector<std::string> dishIdStrs;
@@ -274,6 +281,7 @@ CommentMsg CheckoutDialog::getComment() const
     return CommentMsg(
         std::to_string(m_userId),
         dishIdStrs,
+        // 先用 toPlainText() 取出纯文本（QString），再用 .toStdString() 转成 C++ 的 std::string。
         m_commentEdit->toPlainText().toStdString(),
         m_rating,
         std::time(nullptr)
