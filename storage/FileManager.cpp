@@ -1,6 +1,7 @@
 #include "FileManager.h"
 #include "Comment_service.h"
 #include <algorithm>
+#include <unordered_map>
 
 std::vector<Dish> FileManager::all_dishes_cpp;
 QList<Dish_qt> FileManager::all_dishes_qt;
@@ -143,12 +144,156 @@ std::vector<User> FileManager::getUsers_cpp() {
 // 在C++中使用，添加用户
 void FileManager::addUser(int id, std::string name, std::string password) {
     std::ofstream ofs;
-    int level = 0;
 
     ofs.open(USER_FILE_PATH, std::ios::app);
-    ofs << "\n" << id << " " << name << " " << password << " " << level;
+    ofs << "\n" << id << " " << name << " " << password << " REGULAR 0";
 
     ofs.close();
+}
+
+void FileManager::SaveUser(const User& user) {
+    std::ifstream in(USER_FILE_PATH);
+    if (!in.is_open()) {
+        std::cerr << "Failed to open " << USER_FILE_PATH << " for reading" << std::endl;
+        return;
+    }
+
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty() || line[0] == '#') {
+            lines.push_back(line);
+            continue;
+        }
+
+        User stored{};
+        std::stringstream ss(line);
+        if (!(ss >> stored.id >> stored.name >> stored.password >> stored.level >> stored.total_spent)) {
+            lines.push_back(line);
+            continue;
+        }
+
+        if (stored.id == user.id) {
+            std::ostringstream rebuilt;
+            rebuilt << user.id << " " << user.name << " " << user.password << " "
+                    << user.level << " " << user.total_spent;
+            lines.push_back(rebuilt.str());
+        } else {
+            lines.push_back(line);
+        }
+    }
+    in.close();
+
+    std::ofstream out(USER_FILE_PATH, std::ios::trunc);
+    if (!out.is_open()) {
+        std::cerr << "Failed to open " << USER_FILE_PATH << " for writing" << std::endl;
+        return;
+    }
+    for (const auto& storedLine : lines) {
+        out << storedLine << "\n";
+    }
+    out.close();
+
+}
+
+std::vector<std::vector<Dish>> FileManager::LoadUserHistoryOrders(const User& user) const {
+    std::ifstream in(HISTORY_ORDER_FILE_PATH);
+    if (!in.is_open()) {
+        std::cerr << "Failed to open " << HISTORY_ORDER_FILE_PATH << std::endl;
+        return {};
+    }
+
+    std::vector<std::vector<Dish>> orders;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+
+        std::istringstream ss(line);
+        std::string userName;
+        if (!(ss >> userName) || userName != user.name) {
+            continue;
+        }
+
+        std::vector<Dish> order;
+        std::string dishName;
+        while (ss >> dishName) {
+            Dish dish{};
+            dish.name = dishName;
+            order.push_back(dish);
+        }
+        orders.push_back(order);
+    }
+    return orders;
+}
+
+void FileManager::SaveCheckout(const User& user, const std::vector<Dish>& order) {
+    {
+        std::ofstream history(HISTORY_ORDER_FILE_PATH, std::ios::app);
+        if (!history.is_open()) {
+            std::cerr << "Failed to open " << HISTORY_ORDER_FILE_PATH << " for writing" << std::endl;
+            return;
+        }
+
+        history << user.name;
+        for (const auto& dish : order) {
+            history << " " << dish.name;
+        }
+        history << "\n";
+    }
+
+    std::unordered_map<int, int> dishCounts;
+    for (const auto& dish : order) {
+        dishCounts[dish.id]++;
+    }
+
+    std::ifstream in(MENU_FILE_PATH);
+    if (!in.is_open()) {
+        std::cerr << "Failed to open " << MENU_FILE_PATH << " for reading" << std::endl;
+        return;
+    }
+
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty() || line[0] == '#') {
+            lines.push_back(line);
+            continue;
+        }
+
+        Dish dish{};
+        std::stringstream ss(line);
+        if (!(ss >> dish.id >> dish.name >> dish.price >> dish.description
+                 >> dish.sales >> dish.rating >> dish.category >> dish.comment_count)) {
+            lines.push_back(line);
+            continue;
+        }
+
+        const auto countIt = dishCounts.find(dish.id);
+        if (countIt != dishCounts.end()) {
+            dish.sales += countIt->second;
+        }
+
+        std::ostringstream rebuilt;
+        rebuilt << dish.id << " " << dish.name << " " << dish.price << " "
+                << dish.description << " " << dish.sales << " " << dish.rating << " "
+                << dish.category << " " << dish.comment_count;
+        lines.push_back(rebuilt.str());
+    }
+    in.close();
+
+    std::ofstream out(MENU_FILE_PATH, std::ios::trunc);
+    if (!out.is_open()) {
+        std::cerr << "Failed to open " << MENU_FILE_PATH << " for writing" << std::endl;
+        return;
+    }
+    for (const auto& menuLine : lines) {
+        out << menuLine << "\n";
+    }
+    out.close();
+
+    SaveUser(user);
 }
 
 // 加载排队队列

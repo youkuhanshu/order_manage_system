@@ -80,8 +80,7 @@ void order_system::setupUI()
             return;
         }
 
-        auto historyOrders = OrderService::loadUserHistoryOrders(
-            m_currentUser, "../storage/data/history_order.txt");
+        auto historyOrders = m_fl.LoadUserHistoryOrders(m_currentUser);
 
         QList<QList<Dish_qt>> matchedOrders;
         QStringList displayLines;
@@ -271,11 +270,18 @@ void order_system::setupUI()
         // 结算前保存订单快照（checkout 后会 clearOrder）
         QList<Dish_qt> orderedDishes = buildQtOrder();
 
-        double total = m_orderService->checkout();
+        double total = m_orderService->checkout(m_fl);
+        m_currentUser = m_orderService->getUser();
 
         // 从文件重新加载用户数据，同步最新的等级和消费
         m_fl.LoadUsers();
+        m_fl.LoadMenu();
         m_users = m_fl.getUsers_cpp();
+        m_allItems = m_fl.getMenu_qt();
+        m_categories = m_fl.getCategories_qt();
+        m_bySales = m_fl.getRecommendBySales();
+        m_byRating = m_fl.getRecommendByRating();
+        m_byComments = m_fl.getRecommendByComments();
         for (const auto &u : m_users) {
             if (u.name == m_currentUser.name) {
                 m_currentUser = u;
@@ -287,6 +293,7 @@ void order_system::setupUI()
         m_orderService->clearOrder();
         m_navBar->setUser(m_currentUser);
         m_navBar->setDishCount(0);
+        m_menuPage->setData(m_allItems, m_bySales, m_byRating, m_byComments, m_categories);
         m_menuPage->setDiscountRate(m_orderService->getDiscountRate(m_currentUser));
 
         // 结算后加入排队队列，拿到取餐号
