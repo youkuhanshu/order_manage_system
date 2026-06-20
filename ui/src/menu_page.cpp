@@ -11,7 +11,7 @@
 #include <QDateTime>
 
 // ---- DeepSeek API 配置 ----
-const QString DEEPSEEK_API_KEY = "sk-3f77a42174714886b17756b869fee34a";
+const QString DEEPSEEK_API_KEY = "";
 const QString DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
 
 MenuPage::MenuPage(QWidget *parent) : QWidget(parent)
