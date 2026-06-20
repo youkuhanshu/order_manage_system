@@ -62,7 +62,7 @@ void order_system::setupUI()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // ---- 导航栏 ----
+    // 导航栏
     m_navBar = new NavBar(ui->centralwidget);
     m_navBar->setDishCount(m_allItems.size());
     m_navBar->setVisible(false);

@@ -20,7 +20,7 @@ void NavBar::setupUI()
     layout->setContentsMargins(20, 0, 20, 0);
     layout->setSpacing(0);
 
-    // ---- 用户信息区域（可点击弹出菜单）----
+    // 用户信息区域（可点击弹出菜单）
     m_userPanel = new QFrame(this);
     m_userPanel->setObjectName("userPanel");
     m_userPanel->setCursor(Qt::PointingHandCursor);
@@ -28,7 +28,7 @@ void NavBar::setupUI()
         #userPanel { background: transparent; border: none; border-radius: 8px; }
         #userPanel:hover { background: #F5F5F5; }
     )");
-    m_userPanel->installEventFilter(this);
+    m_userPanel->installEventFilter(this); // 让 NavBar 能监听 m_userPanel 身上发生的所有事件，否则QFrame 默认不响应点击
 
     auto *panelLayout = new QHBoxLayout(m_userPanel);
     panelLayout->setContentsMargins(8, 0, 8, 0);
@@ -121,10 +121,10 @@ void NavBar::setUser(const User &user)
     m_userNameLabel->setText(name);
 
     QString levelText, levelColor;
-    if      (user.level == "PLATINUM") { levelText = "白金会员"; levelColor = "#9C4FE8"; }
-    else if (user.level == "GOLD")     { levelText = "黄金会员"; levelColor = "#E8960A"; }
-    else if (user.level == "SILVER")   { levelText = "白银会员"; levelColor = "#7A9BB5"; }
-    else                               { levelText = "普通用户"; levelColor = "#AAAAAA"; }
+    if (user.level == "PLATINUM") { levelText = "白金会员"; levelColor = "#9C4FE8"; }
+    else if (user.level == "GOLD") { levelText = "黄金会员"; levelColor = "#E8960A"; }
+    else if (user.level == "SILVER") { levelText = "白银会员"; levelColor = "#7A9BB5"; }
+    else { levelText = "普通用户"; levelColor = "#AAAAAA"; }
 
     m_userLevelLabel->setText(levelText);
     m_userLevelLabel->setStyleSheet(

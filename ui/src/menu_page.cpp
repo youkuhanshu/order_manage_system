@@ -24,8 +24,8 @@ void MenuPage::setupUI()
     pageLayout->setContentsMargins(0, 0, 0, 0);
     pageLayout->setSpacing(0);
 
-    // ---- 左侧分类列表 ----
-    m_categoryList = new QListWidget(this);
+    // 左侧分类列表
+    m_categoryList = new QListWidget(this); // 可点击的列表控件
     m_categoryList->setFixedWidth(150);
     m_categoryList->setStyleSheet(R"(
         QListWidget {
@@ -42,7 +42,7 @@ void MenuPage::setupUI()
     )");
 
     connect(m_categoryList, &QListWidget::currentRowChanged,
-            this, &MenuPage::onCategoryChanged);
+            this, &MenuPage::onCategoryChanged); // onCategoryChanged接收currentRowChanged传递的row参数，刷新菜单
 
     pageLayout->addWidget(m_categoryList);
 
@@ -52,7 +52,7 @@ void MenuPage::setupUI()
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(0);
 
-    // 推荐方式切换栏
+    // 推荐方式切换栏：单独作为一个整体，便于显示/隐藏
     m_recommendBar = new QFrame(rightContainer);
     m_recommendBar->setFixedHeight(40);
     auto *barLayout = new QHBoxLayout(m_recommendBar);
@@ -117,7 +117,7 @@ void MenuPage::setupUI()
     m_aiLoadingLabel->setStyleSheet(
         "font-size: 14px; color: #0085FF; padding: 40px;"
         "border: none; background: transparent;");
-    m_aiLoadingLabel->setVisible(false);
+    m_aiLoadingLabel->setVisible(false); // 默认隐藏
     aiLayout->addWidget(m_aiLoadingLabel);
 
     m_aiResponseText = new QTextEdit(m_aiResponseContainer);
@@ -136,7 +136,7 @@ void MenuPage::setupUI()
     rightLayout->addWidget(m_aiResponseContainer, 1);
 
     // 菜品滚动区
-    m_dishScrollArea = new QScrollArea(rightContainer);
+    m_dishScrollArea = new QScrollArea(rightContainer); // 带有滚动条的容器
     m_dishScrollArea->setWidgetResizable(true);
     m_dishScrollArea->setStyleSheet(R"(
         QScrollArea { background: #F5F5F5; border: none; }
@@ -150,7 +150,7 @@ void MenuPage::setupUI()
 
     m_dishContainer = new QWidget();
     m_dishContainer->setStyleSheet("background: #F5F5F5;");
-    m_dishListLayout = new QVBoxLayout(m_dishContainer);
+    m_dishListLayout = new QVBoxLayout(m_dishContainer); // 此时m_dishContainer为空，后续添加卡片
     m_dishListLayout->setContentsMargins(16, 12, 16, 12);
     m_dishListLayout->setSpacing(10);
     m_dishListLayout->addStretch();
@@ -161,6 +161,7 @@ void MenuPage::setupUI()
     pageLayout->addWidget(rightContainer, 1);
 }
 
+// 全部菜品，销量排序列表，评分排序列表，评论数排序列表，类型列表
 void MenuPage::setData(const QList<Dish_qt> &allItems,
                        const QList<Dish_qt> &bySales,
                        const QList<Dish_qt> &byRating,
@@ -200,6 +201,7 @@ void MenuPage::onCategoryChanged(int row)
 {
     if (row < 0) return;
     m_recommendBar->setVisible(row == 1);
+    hideAIResponse(); // 隐藏AI区域，否则菜单显示不出来
     refreshDishList(m_categoryList->item(row)->text());
 }
 
@@ -243,6 +245,10 @@ void MenuPage::refreshDishList(const QString &category)
         if (child->widget()) child->widget()->deleteLater();
         delete child;
     }
+
+    // 默认：显示菜品卡片区、隐藏 AI 推荐区（只有"智能推荐"分支会反过来）
+    // 修复 bug：之前从"智能推荐"切到普通分类/全部时，没把卡片区重新显示，导致菜单一片空白——把恢复显示提到这里，覆盖所有非智能推荐路径。
+    m_dishScrollArea->setVisible(true);
 
     int count = 0;
 

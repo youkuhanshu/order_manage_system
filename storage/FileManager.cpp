@@ -57,6 +57,7 @@ void FileManager::LoadMenu() {
 
     auto copy = all_dishes_qt; // 防止原来的向量被修改
 
+    // sort会根据lambda返回的结果决定谁在前谁在后
     // 按销量
     std::sort(copy.begin(), copy.end(), [](const Dish_qt &a, const Dish_qt &b) { return a.sales > b.sales; });
     for (int i = 0; i < qMin(5, copy.size()); i++) {
