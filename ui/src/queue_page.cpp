@@ -3,14 +3,19 @@
 #include <QHBoxLayout>
 #include <ctime>
 
-// ================================================================
-//  QueuePage
-// ================================================================
+
+// 构造：调用setupUI构建排队页完整布局，启动定时器定期刷新时间显示
 QueuePage::QueuePage(QWidget *parent) : QWidget(parent)
 {
     setupUI();
+
+    // 每30秒刷新排队时间文字（"刚刚下单" → "已等待1分钟" → ...）
+    m_refreshTimer = new QTimer(this);
+    connect(m_refreshTimer, &QTimer::timeout, this, &QueuePage::refreshDisplay);
+    m_refreshTimer->start(30000);
 }
 
+// 接收主窗口传入的队列快照数据，保存到成员变量并刷新显示
 void QueuePage::setQueueData(int currentCall,
                              const std::vector<QueueMsg> &waiting,
                              const std::vector<QueueMsg> &taking,
@@ -23,6 +28,7 @@ void QueuePage::setQueueData(int currentCall,
     refreshDisplay();
 }
 
+// 构建排队页完整布局：顶部叫号横幅 → 左右双列(预约排队/待取餐) → 底部返回按钮
 void QueuePage::setupUI()
 {
     setStyleSheet("background: #F5F5F5;");
@@ -169,6 +175,7 @@ void QueuePage::setupUI()
     mainLayout->addLayout(bottomBar);
 }
 
+// 根据m_currentCall/m_waiting/m_taking/m_myQueueId刷新全部UI：叫号数字、状态文字、两个列表
 void QueuePage::refreshDisplay()
 {
     // 当前叫号
@@ -184,11 +191,13 @@ void QueuePage::refreshDisplay()
         // 判断我的号在哪个队列
         bool inTaking = false;
         for (size_t i = 0; i < m_taking.size(); i++) {
-            if (m_taking[i].queue_id == m_myQueueId) { inTaking = true; break; }
+            if (m_taking[i].queue_id == m_myQueueId) { 
+                inTaking = true; break; }
         }
         int ahead = -1;
         for (size_t i = 0; i < m_waiting.size(); i++) {
-            if (m_waiting[i].queue_id == m_myQueueId) { ahead = (int)i; break; }
+            if (m_waiting[i].queue_id == m_myQueueId) { 
+                ahead = (int)i; break; }
         }
 
         if (inTaking) {
@@ -245,6 +254,7 @@ void QueuePage::refreshDisplay()
     m_takingCountLabel->setText(QString("可取餐 %1 桌").arg((int)m_taking.size()));
 }
 
+// 创建单行排队号卡片：号码圆牌(蓝/绿/橙) + 订单信息 + 状态文字或「取餐」按钮
 QFrame *QueuePage::makeTicketRow(const QueueMsg &msg, int position, bool isMine, bool ready)
 {
     auto *row = new QFrame();

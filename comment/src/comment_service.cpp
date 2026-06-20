@@ -31,18 +31,18 @@ std::vector<std::string> DishComment_msg::all_dish_rate_rank;
             rank_list.erase(std::remove(rank_list.begin(), rank_list.end(), dish_id), rank_list.end());
             // 2. 根据更新后的平均分，找到新位置并插入（确保从高分到低分排序）
             if (Dish_Comments_.find(dish_id) == Dish_Comments_.end()) {
-                continue; // 如果由于某种原因菜品不存在，则跳过
+                continue; 
             }
             double current_dish_rate = Dish_Comments_.at(dish_id).aver_rate;
-            bool inserted = false;
+            bool is_inserted = false;
             for(auto it = rank_list.begin(); it != rank_list.end(); ++it) {
                 if (Dish_Comments_.at(*it).aver_rate <= current_dish_rate) {
                     rank_list.insert(it, dish_id); // 在第一个不高于当前分的位置插入
-                    inserted = true;
+                    is_inserted = true;
                     break;
                 }
             }
-            if (!inserted) {
+            if (!is_inserted) {
                 rank_list.push_back(dish_id); // 分数最低，插到末尾
             }
         }
@@ -70,8 +70,8 @@ std::vector<std::string> DishComment_msg::all_dish_rate_rank;
         for(auto it = msg.dish_ids.begin();it != msg.dish_ids.end();it++){
             std::string dish_name = *it;
             Dish_Comments_[dish_name].comments.push_back(msg);
-            Dish_Comments_[dish_name].aver_rate = 
-            (Dish_Comments_[dish_name].aver_rate * Dish_Comments_[dish_name].dish_comment_num + msg.rate)  
+            Dish_Comments_[dish_name].aver_rate =
+            (Dish_Comments_[dish_name].aver_rate * Dish_Comments_[dish_name].dish_comment_num + msg.rate)
             / (Dish_Comments_[dish_name].dish_comment_num + 1);
 
             Dish_Comments_[dish_name].dish_comment_num++;

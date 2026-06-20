@@ -37,6 +37,7 @@ public:
 signals:
     void addDishClicked(int dishId);      // 点击 + 加入购物车
     void dishCountChanged(int count);     // 当前展示菜品数量变化
+    void viewCommentsRequested(int dishId); // 浏览菜品评论
 
 private slots:
     void onCategoryChanged(int row);

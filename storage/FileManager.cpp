@@ -417,7 +417,7 @@ void FileManager::AddCommentAndUpdateMenu(const CommentMsg& comment, CommentServ
         for (auto& dish : all_dishes_cpp) {
             if (dish.id == targetId) {
                 dish.rating = newRating;
-                dish.comment_count++;  // CommentService 内部已 +1，这里同步
+                dish.comment_count++;
                 break;
             }
         }

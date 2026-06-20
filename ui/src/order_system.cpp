@@ -1,5 +1,6 @@
 #include "order_system.h"
 #include "checkout_dialog.h"
+#include "comment_dialog.h"
 
 #include <QApplication>
 #include <QDialog>
@@ -224,6 +225,7 @@ void order_system::setupUI()
         }
     });
     connect(m_menuPage, &MenuPage::dishCountChanged, m_navBar, &NavBar::setDishCount);
+    connect(m_menuPage, &MenuPage::viewCommentsRequested, this, &order_system::openCommentDialog);
 
     // 购物车页 & 排队页
     m_cartPage  = new CartPage();
@@ -468,5 +470,25 @@ void order_system::onPickup(int queueId)
     // 2) 取餐：把该号移出取餐队列，刷新排队显示
     m_queueService.take_meal(queueId);
     refreshQueuePage();
+}
+
+// 浏览菜品评论：查菜品 → 从 CommentService 取评论 → 注入依赖创建 CommentDialog
+void order_system::openCommentDialog(int dishId)
+{
+    // 1. 查找对应菜品
+    Dish_qt dish;
+    bool found = false;
+    for (const auto &d : m_allItems) {
+        if (d.id == dishId) { dish = d; found = true; break; }
+    }
+    if (!found) return;
+
+    // 2. 从 CommentService 获取该菜品按时间排序的评论（与之前行为一致：默认按时间）
+    const std::string idStr = std::to_string(dishId);
+    std::vector<CommentMsg> dishComments = m_commentService.getDishComments(idStr, "time");
+
+    // 3. 创建弹窗，注入全部依赖
+    CommentDialog dlg(dish, dishComments, m_users, &m_commentService, this);
+    dlg.exec();
 }
 

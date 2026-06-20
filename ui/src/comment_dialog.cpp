@@ -1,4 +1,5 @@
 #include "comment_dialog.h"
+#include "Comment_service.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -9,42 +10,34 @@
 #include <QDateTime>
 #include <QProgressBar>
 #include <QMessageBox>
-#include <algorithm>
 
-std::vector<User> CommentDialog::m_users;
-
-CommentDialog::CommentDialog(const Dish_qt &dish, QWidget *parent) : QDialog(parent)
+// 构造
+CommentDialog::CommentDialog(const Dish_qt                &dish,
+                             const std::vector<CommentMsg> &dishComments,
+                             const std::vector<User>       &users,
+                             CommentService                *commentService,
+                             QWidget                       *parent)
+    : QDialog(parent)
+    , m_users(users)
+    , m_commentService(commentService)
+    , m_dishIdStr(std::to_string(dish.id))
 {
-    std::vector<CommentMsg> allComments;
-
-    // 加载用户、评论信息
-    FileManager fileManager;
-    fileManager.LoadUsers();
-    fileManager.LoadComments();
-    allComments = fileManager.getComments();
-    m_users = fileManager.getUsers_cpp();
-
-    if (m_users.size() == 0) {
+    if (m_users.empty()) {
         QMessageBox::warning(this, "加载失败", QString("未能加载用户数据\n请确认文件存在且格式正确!"));
     }
-    if (allComments.size() == 0) {
-        QMessageBox::warning(this, "加载失败", QString("未能加载评论数据\n请确认文件存在且格式正确!"));
+    if (dishComments.empty()) {
+        QMessageBox::warning(this, "暂无评论", QString("该菜品暂无用户评价"));
     }
 
-    // 筛选该菜品的评论
-    const std::string idStr = std::to_string(dish.id);
-    for (const auto &c : allComments) {
-        for (const auto &did : c.dish_ids) {
-            if (did == idStr) {
-                m_comments.append(c);
-                break;
-            }
-        }
+    // 直接使用注入的评论数据
+    for (const auto &c : dishComments) {
+        m_comments.append(c);
     }
 
     setupUI(dish, m_comments);
 }
 
+// 构建弹窗整体布局：标题栏(含排序下拉框) → 评分概览卡片(平均分+星级分布) → 评论列表滚动区
 void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &comments)
 {
     setWindowTitle(QString("用户评价 · %1").arg(dish.name));
@@ -91,6 +84,7 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
             font-size: 12px; color: #666666;
         }
     )");
+    //重载成int 参数的 currentIndexChanged
     connect(m_sortCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &CommentDialog::onSortChanged);
     titleLayout->addWidget(m_sortCombo);
@@ -110,12 +104,10 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
     scoreBox->setAlignment(Qt::AlignCenter);
     scoreBox->setSpacing(2);
 
-    double avgScore = 0.0;
-    if (!comments.isEmpty()) {
-        for (const auto &c : comments) avgScore += c.rate;
-        avgScore /= comments.size();
-    } else {
-        avgScore = dish.rating;
+    // 平均分：复用 CommentService 预计算的值
+    double avgScore = dish.rating;
+    if (m_commentService && !comments.isEmpty()) {
+        avgScore = m_commentService->getDishAverRate(m_dishIdStr);
     }
 
     auto *scoreBig = new QLabel(QString::number(avgScore, 'f', 1), summaryCard);
@@ -210,48 +202,53 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
     resize(540, 560);
 }
 
-// 排序模式切换
+// 响应排序下拉框变化：index=0按时间，index=1按评分，复用 CommentService 排序索引
 void CommentDialog::onSortChanged(int index)
 {
     if (index == m_sortMode) return;
     m_sortMode = index;
 
-    // 按所选模式排序
-    if (m_sortMode == 0) {
-        // 按时间排序（降序：最新在前）
-        std::sort(m_comments.begin(), m_comments.end(),
-                  [](const CommentMsg &a, const CommentMsg &b) {
-                      return a.in_time > b.in_time;
-                  });
-    } else {
-        // 按评分排序（降序：高分在前）
-        std::sort(m_comments.begin(), m_comments.end(),
-                  [](const CommentMsg &a, const CommentMsg &b) {
-                      return a.rate > b.rate;
-                  });
-    }
+    const QString sortType = (m_sortMode == 0) ? "time" : "rate";
+    loadComments(sortType);
 
     refreshCommentList();
 }
 
-// 清空并重建评论卡片列表
+// 从 CommentService 按排序类型重新拉取该菜品的评论
+void CommentDialog::loadComments(const QString &sortType)
+{
+    m_comments.clear();
+    if (m_commentService) {
+        auto sorted = m_commentService->getDishComments(
+            m_dishIdStr, sortType.toStdString());
+        for (const auto &c : sorted) {
+            m_comments.append(c);
+        }
+    }
+}
+
+// 清空m_listLayout中所有旧卡片，按当前排序重建评论卡片列表
 void CommentDialog::refreshCommentList()
 {
-    // 清除旧卡片
+    // takeAt(0) 每次取布局的第0项（取出后布局自动前移），返回 QLayoutItem*
     QLayoutItem *child;
     while ((child = m_listLayout->takeAt(0)) != nullptr) {
+        // 如果该布局项包含 widget，则标记为延迟删除（Qt 事件循环下次处理时安全析构）
         if (child->widget()) child->widget()->deleteLater();
+        // 删除 QLayoutItem 本身（释放布局项占用的内存）
         delete child;
     }
 
+   
     if (m_comments.isEmpty()) {
         auto *emptyLabel = new QLabel("暂无评论~", m_listContainer);
-        emptyLabel->setAlignment(Qt::AlignCenter);
-        emptyLabel->setStyleSheet(
+        emptyLabel->setAlignment(Qt::AlignCenter);                   
+        emptyLabel->setStyleSheet(                                  
             "font-size: 14px; color: #CCCCCC; padding: 40px;"
             "border: none; background: transparent;");
-        m_listLayout->addWidget(emptyLabel);
+        m_listLayout->addWidget(emptyLabel);                       
     } else {
+        // 遍历已排序的评论列表，逐一创建卡片并加入布局
         for (const auto &c : m_comments) {
             m_listLayout->addWidget(makeCommentCard(c, m_listContainer));
         }
@@ -259,7 +256,7 @@ void CommentDialog::refreshCommentList()
     m_listLayout->addStretch();
 }
 
-// 单条评论卡片
+// 创建单条评论展示卡片：彩色圆形头像 + 用户名 + 星级 + 时间 + 评论正文
 QWidget *CommentDialog::makeCommentCard(const CommentMsg &comment, QWidget *parent)
 {
     auto *card = new QFrame(parent);
@@ -344,7 +341,7 @@ QWidget *CommentDialog::makeCommentCard(const CommentMsg &comment, QWidget *pare
     return card;
 }
 
-// 星级分布条
+// 创建一条星级分布行：N★标签 + QProgressBar黄色进度条 + 该星级评论数量
 QFrame *CommentDialog::makeRatingBar(int star, int count, int total, QWidget *parent)
 {
     auto *row = new QFrame(parent);
@@ -353,6 +350,7 @@ QFrame *CommentDialog::makeRatingBar(int star, int count, int total, QWidget *pa
     rowLayout->setContentsMargins(0, 0, 0, 0);
     rowLayout->setSpacing(6);
 
+    // 传递给它的参数 star 的值来替换字符串中的占位符 %1，生成 N★ 显示标签
     auto *starLabel = new QLabel(QString("%1★").arg(star), row);
     starLabel->setFixedWidth(22);
     starLabel->setStyleSheet(
@@ -384,14 +382,14 @@ QFrame *CommentDialog::makeRatingBar(int star, int count, int total, QWidget *pa
     return row;
 }
 
-// 时间戳 → "MM-dd HH:mm"
+// 将time_t时间戳格式化为 "MM-dd HH:mm" 显示字符串
 QString CommentDialog::formatTime(std::time_t t)
 {
     return QDateTime::fromSecsSinceEpoch((qint64)t)
                .toString("MM-dd HH:mm");
 }
 
-// 评分 → 星号字符串
+// 将评分数字(1-5)转为星号字符串，如3→"★★★☆☆"
 QString CommentDialog::starStr(int rate)
 {
     QString s;
@@ -399,9 +397,9 @@ QString CommentDialog::starStr(int rate)
     return s;
 }
 
-// 匹配用户id与用户名
+// 遍历静态m_users向量，根据用户ID查找并返回用户名，未找到返回"未知用户"
 QString CommentDialog::matchIDName(std::string id) {
-    for (size_t i = 0;i < CommentDialog::m_users.size();i++) {
+    for (size_t i = 0; i < m_users.size(); i++) {
         if (std::stoi(id) == m_users[i].id) {
             return QString::fromStdString(m_users[i].name);
         }
