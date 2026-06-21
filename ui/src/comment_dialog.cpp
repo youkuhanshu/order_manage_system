@@ -104,7 +104,7 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
     scoreBox->setAlignment(Qt::AlignCenter);
     scoreBox->setSpacing(2);
 
-    // 平均分：复用 CommentService 预计算的值
+    // 平均分
     double avgScore = dish.rating;
     if (m_commentService && !comments.isEmpty()) {
         avgScore = m_commentService->getDishAverRate(m_dishIdStr);
@@ -147,9 +147,9 @@ void CommentDialog::setupUI(const Dish_qt &dish, const QList<CommentMsg> &commen
     auto *barsLayout = new QVBoxLayout();
     barsLayout->setSpacing(5);
     int total = comments.size();
-    int dist[6] = {0};
-    for (const auto &c : comments) {
-        if (c.rate >= 1 && c.rate <= 5) dist[c.rate]++;
+    std::vector<int> dist = {0, 0, 0, 0, 0, 0};
+    if (m_commentService) {
+        dist = m_commentService->getRatingDistribution(m_dishIdStr);
     }
     for (int star = 5; star >= 1; star--) {
         barsLayout->addWidget(makeRatingBar(star, dist[star], total, summaryCard));

@@ -161,6 +161,23 @@ void QueuePage::setupUI()
     auto *bottomBar = new QHBoxLayout();
     bottomBar->setSpacing(10);
 
+    // 手动刷新按钮：触发后由 order_system 重新从 QueueService 拉数据
+    auto *refreshBtn = new QPushButton("刷新", this);
+    refreshBtn->setCursor(Qt::PointingHandCursor);
+    refreshBtn->setFixedHeight(34);
+    refreshBtn->setStyleSheet(R"(
+        QPushButton {
+            background: #FFFFFF; color: #0085FF; border: 1px solid #0085FF;
+            border-radius: 6px; font-size: 13px; padding: 0 16px;
+        }
+        QPushButton:hover   { background: #EBF5FF; }
+        QPushButton:pressed { background: #D6ECFF; }
+    )");
+    connect(refreshBtn, &QPushButton::clicked, this, [this]() {
+        emit refreshRequested();
+    });
+    bottomBar->addWidget(refreshBtn);
+
     bottomBar->addStretch();
 
     auto *backBtn = new QPushButton("← 返回菜单", this);

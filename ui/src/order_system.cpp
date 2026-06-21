@@ -32,7 +32,7 @@ void order_system::loadData()
     m_fl.LoadComments();
 
     m_allComments = m_fl.getComments();
-    // 将所有已有评论注入 CommentService（用于排序与推荐）
+    // 将所有已有评论注入 CommentService
     for (const auto &c : m_allComments) {
         m_commentService.AddComment(c);
     }
@@ -314,7 +314,6 @@ void order_system::setupUI()
         }
         m_pendingReviews.insert(m_myQueueId, pr);
 
-        // 不在这里弹评价窗了：提示取餐号，跳到排队页等待叫号
         QMessageBox::information(this, "结算成功",
             QString("实付 ¥%1\n您的取餐号：%2\n请在排队页等待叫号，取餐时可评价")
                 .arg(total, 0, 'f', 2).arg(m_myQueueId));
@@ -327,6 +326,9 @@ void order_system::setupUI()
     });
     connect(m_queuePage, &QueuePage::pickupRequested, this, [this](int queueId) {
         onPickup(queueId);
+    });
+    connect(m_queuePage, &QueuePage::refreshRequested, this, [this]() {
+        refreshQueuePage();
     });
 
     m_stackedWidget->addWidget(m_loginPage);    // index 0 : 登录页
@@ -418,8 +420,8 @@ void order_system::scheduleAutoAdvance()
         return;
     }
 
-    // 生成 5~20 秒随机延迟（毫秒）
-    int delaySec  = QRandomGenerator::global()->bounded(5, 21);
+    int delaySec  = m_queueService.nextAdvanceDelay();
+    //转为毫秒
     int delayMsec = delaySec * 1000;
 
     m_autoAdvancePending = true;
@@ -431,27 +433,26 @@ void order_system::onAutoAdvance()
     m_autoAdvancePending = false;
 
     if (!m_queueService.is_Empty()) {
-        m_queueService.advance_queue();   // 预约队列第一人 → 取餐队列
+        m_queueService.advance_queue(); 
         refreshQueuePage();
     }
 
     scheduleAutoAdvance();  // 调度下一次随机叫号
 }
 
-//  顾客点「取餐」：先弹评价窗（若该单还没评价），再把号移出取餐队列
+//  顾客点「取餐」：先弹评价窗，再把号移出取餐队列
 void order_system::onPickup(int queueId)
 {
-    // 1) 弹出评价窗——只有这单还存着待评价信息时才弹
+    // 1. 弹出评价窗
     if (m_pendingReviews.contains(queueId)) {
         PendingReview pr = m_pendingReviews.value(queueId);
 
         CheckoutDialog dlg(pr.dishNames, pr.dishIds, pr.total, queueId, pr.userId, this);
+        //阻塞等待用户操作
         dlg.exec();
 
         CommentMsg cm = dlg.getComment();
         if (cm.rate > 0) {
-            // FileManager 内部复用 CommentService 的评分更新机制，
-            // 同时完成文件写入 + 内存同步，无需再单独调用 AddComment / LoadMenu / LoadComments
             m_fl.AddCommentAndUpdateMenu(cm, m_commentService);
 
             m_allItems    = m_fl.getMenu_qt();
@@ -467,7 +468,7 @@ void order_system::onPickup(int queueId)
         m_pendingReviews.remove(queueId);  // 评价过/跳过都不再重复弹
     }
 
-    // 2) 取餐：把该号移出取餐队列，刷新排队显示
+    // 2. 取餐：把该号移出取餐队列，刷新排队显示
     m_queueService.take_meal(queueId);
     refreshQueuePage();
 }
@@ -475,19 +476,18 @@ void order_system::onPickup(int queueId)
 // 浏览菜品评论：查菜品 → 从 CommentService 取评论 → 注入依赖创建 CommentDialog
 void order_system::openCommentDialog(int dishId)
 {
-    // 1. 查找对应菜品
     Dish_qt dish;
     bool found = false;
     for (const auto &d : m_allItems) {
-        if (d.id == dishId) { dish = d; found = true; break; }
+        if (d.id == dishId) { 
+            dish = d; found = true; 
+            break; }
     }
     if (!found) return;
 
-    // 2. 从 CommentService 获取该菜品按时间排序的评论（与之前行为一致：默认按时间）
     const std::string idStr = std::to_string(dishId);
     std::vector<CommentMsg> dishComments = m_commentService.getDishComments(idStr, "time");
 
-    // 3. 创建弹窗，注入全部依赖
     CommentDialog dlg(dish, dishComments, m_users, &m_commentService, this);
     dlg.exec();
 }

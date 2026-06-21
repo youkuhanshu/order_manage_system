@@ -13,15 +13,11 @@ private:
     std::vector<int> rate_rank_; //评论分数排列索引
     std::map<std::string,DishComment_msg> Dish_Comments_; //菜品评论地图
     int comment_num_=0; //全部评论数
-    CommentCallback on_updated_; //回调函数
 
 public:
     //构造析构函数
     CommentService() = default;
     ~CommentService() = default;
-
-    //注册回调函数
-    void setCommentCallback(CommentCallback callback);
 
     //功能函数
     void AddComment(CommentMsg msg); //添加评论
@@ -34,5 +30,6 @@ public:
     double getDishAverRate(const std::string& dish_name);
     std::vector<CommentMsg> getDishComments(const std::string& dish_name,std::string rank_type);
     std::vector<DishComment_msg> getBest5Dishs();
+    std::vector<int> getRatingDistribution(const std::string& dish_name); // 返回1-5星各有多少条评论
 
 };
