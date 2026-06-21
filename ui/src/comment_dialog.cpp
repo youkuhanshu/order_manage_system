@@ -219,8 +219,7 @@ void CommentDialog::loadComments(const QString &sortType)
 {
     m_comments.clear();
     if (m_commentService) {
-        auto sorted = m_commentService->getDishComments(
-            m_dishIdStr, sortType.toStdString());
+        auto sorted = m_commentService->getDishComments(m_dishIdStr, sortType.toStdString());
         for (const auto &c : sorted) {
             m_comments.append(c);
         }

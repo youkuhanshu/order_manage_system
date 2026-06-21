@@ -95,17 +95,17 @@ std::vector<std::string> DishComment_msg::all_dish_rate_rank;
     double CommentService::getDishAverRate(const std::string& dish_name){
         return Dish_Comments_[dish_name].aver_rate;
     }
-    std::vector<CommentMsg> CommentService::getDishComments(const std::string& dish_name,std::string rank_type){
-        DishComment_msg dish_msg = Dish_Comments_[dish_name];
-        std::vector<CommentMsg> com;
+    std::vector<CommentMsg> CommentService::getDishComments(const std::string& dish_name, std::string rank_type){
+        // 复制该菜品的全部评论后直接排序——不依赖 rate_rank 索引
+        //（rate_rank 一直没被填充，之前按评分排序会返回空列表，导致弹窗显示“暂无评论”）
+        std::vector<CommentMsg> com = Dish_Comments_[dish_name].comments;
         if(rank_type == "time"){
-            com = dish_msg.comments;
+            // 按时间：最新的在前
+            std::sort(com.begin(), com.end(), [](const CommentMsg& a, const CommentMsg& b){ return a.in_time > b.in_time; });
         }
         else if(rank_type == "rate"){
-            com.clear();
-            for(auto it = dish_msg.rate_rank.begin();it != dish_msg.rate_rank.end();it++){
-                com.push_back(dish_msg.comments[*it]);
-            }
+            // 按评分：高分在前
+            std::sort(com.begin(), com.end(), [](const CommentMsg& a, const CommentMsg& b){ return a.rate > b.rate; });
         }
         return com;
     }
