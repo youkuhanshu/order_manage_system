@@ -13,7 +13,6 @@
 #include "cart_page.h"
 #include "queue_page.h"
 #include <QTimer>
-#include <QRandomGenerator>
 #include <QMap>
 
 /// 一笔“已下单、待取餐”的订单信息，取餐时用来弹评价窗

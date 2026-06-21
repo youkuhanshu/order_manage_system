@@ -31,6 +31,7 @@ public:
 signals:
     void backToMenuRequested();                                            ///< 通知主窗口返回菜单页
     void pickupRequested(int queueId);                                     ///< 用户点击「取餐」按钮，传出取餐号
+    void refreshRequested();                                               ///< 用户手动点击刷新按钮，通知主窗口重新拉取队列数据
 
 private:
     void setupUI();                                                        // 构建排队页面布局：顶部叫号横幅 + 左右双列列表 + 底部返回按钮
@@ -51,4 +52,5 @@ private:
     QLabel      *m_takingCountLabel;   // 取餐排队人数
     QVBoxLayout *m_waitingLayout;      // 预约排队列表
     QVBoxLayout *m_takingLayout;       // 取餐排队列表
+    QPushButton *m_refreshBtn;         // 手动刷新按钮
 };

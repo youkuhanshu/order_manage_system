@@ -4,11 +4,6 @@
 // 静态成员定义（全局菜品平均分排名索引）
 std::vector<std::string> DishComment_msg::all_dish_rate_rank;
 
-    //注册回调函数
-    void CommentService::setCommentCallback(CommentCallback callback){
-        on_updated_ = callback;
-    };
-
     //功能函数
     void CommentService::AddComment(CommentMsg msg){
         All_Comments_.push_back(msg);
@@ -19,9 +14,6 @@ std::vector<std::string> DishComment_msg::all_dish_rate_rank;
         UpdateDishComment(msg);
         UpdateAllDishRank(msg);
 
-        if(on_updated_){
-            on_updated_("AddComment",&All_Comments_);
-        }
     }
     
     void CommentService::UpdateAllDishRank(CommentMsg msg) {
@@ -118,25 +110,23 @@ std::vector<std::string> DishComment_msg::all_dish_rate_rank;
             return best_dishes;
         }
 
-        // 1. 填充五个
+        // 填充五个
         int count = 0;
         for (const auto& dish_id : rank_list) {
             if (count >= 5) {
                 break;
             }
-            // 安全检查：确保 dish_id 存在于 Dish_Comments_ 中
             if (Dish_Comments_.count(dish_id)) {
                 best_dishes.push_back(Dish_Comments_.at(dish_id));
                 count++;
             }
         }
 
-        // 2. 多于五个，检查并列
+        // 多于五个，检查并列
         if (rank_list.size() > 5 && ! best_dishes.empty()) {
-        double fifth_rate = best_dishes.back().aver_rate; // 第5名的分数
+        double fifth_rate = best_dishes.back().aver_rate; 
         for (int i = 5; i < rank_list.size(); ++i) {
             const auto& dish_id = rank_list[i];
-            // 安全检查：确保 dish_id 存在，且分数与第五名相同
             if (Dish_Comments_.count(dish_id) && Dish_Comments_.at(dish_id).aver_rate == fifth_rate) {
                 best_dishes.push_back(Dish_Comments_.at(dish_id));
             } 
@@ -146,4 +136,14 @@ std::vector<std::string> DishComment_msg::all_dish_rate_rank;
         }
     }
     return best_dishes;
+}
+
+std::vector<int> CommentService::getRatingDistribution(const std::string& dish_name) {
+    std::vector<int> dist(6, 0);  // dist[1]~dist[5] 对应1-5星
+    auto it = Dish_Comments_.find(dish_name);
+    if (it == Dish_Comments_.end()) return dist;
+    for (const auto& c : it->second.comments) {
+        if (c.rate >= 1 && c.rate <= 5) dist[c.rate]++;
+    }
+    return dist;
 }

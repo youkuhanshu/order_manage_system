@@ -1,21 +1,14 @@
 #include "queue_service.h"
+#include <cstdlib>
 
 //构造
 QueueService::QueueService():current_calling(0),next_giving(1001){}
 
-//注册回调函数
-void QueueService::setQueueCallback(QueueCallback callback){
-    on_updated_ = callback;
-}
 
 //功能函数
 int QueueService::in_queue(int order_id){
     int id = next_giving++;
     waiting_.push_back(QueueMsg(id,order_id,std::time(nullptr)));
-
-    if(on_updated_){
-        on_updated_("in_queue",&waiting_);
-    }
 
     return id;
 }
@@ -28,9 +21,6 @@ void QueueService::advance_queue(){
     waiting_.erase(waiting_.begin());
     current_calling++;
 
-    if(on_updated_){
-        on_updated_("advance_queue",&waiting_);
-    }
 }
 
 //顾客取餐：从取餐队列里移除该号
@@ -57,6 +47,11 @@ bool QueueService::is_too_long(){
         }
     }
     return false;
+}
+
+// 返回 5~20 秒随机叫号间隔
+int QueueService::nextAdvanceDelay() const {
+    return 5 + std::rand() % 16;
 }
 
 //接口
